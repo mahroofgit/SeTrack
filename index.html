@@ -34,7 +34,7 @@
                     <h2 id="total-spent" class="text-2xl font-black text-slate-200">$0.00</h2>
                 </div>
             </div>
-            <p class="text-[10px] opacity-40 text-center italic">Calculated from all active & sold items</p>
+            <p class="text-[10px] opacity-40 text-center italic">Includes all active & sold items</p>
         </div>
 
         <div class="bg-white p-5 rounded-3xl card-shadow border border-slate-100 mb-6">
@@ -93,7 +93,7 @@
                     if (index === 0 || !line.trim()) return;
                     const c = line.split(',');
                     const name = c[0]?.replace(/"/g,'');
-                    const cost = parseFloat(c[2]); // Taking "Total Paid" column
+                    const cost = parseFloat(c[2]); 
                     if(name && !isNaN(cost)) {
                         data.push({ 
                             id: Date.now() + Math.random(), 
@@ -137,8 +137,15 @@
                     totalSpent += item.totalCost;
                     if(item.sold) totalProfit += item.profit;
 
+                    // Formatting logic for profit color and prefix
+                    const isLoss = item.profit < 0;
+                    const profitText = isLoss 
+                        ? `-$${Math.abs(item.profit).toFixed(2)}` 
+                        : `+$${item.profit.toFixed(2)}`;
+                    const profitClass = isLoss ? 'text-red-500' : 'text-green-600';
+
                     const card = document.createElement('div');
-                    card.className = `p-4 rounded-3xl flex justify-between items-center border transition-all ${item.sold ? 'bg-green-50 border-green-100' : 'bg-white border-slate-100 card-shadow'}`;
+                    card.className = `p-4 rounded-3xl flex justify-between items-center border transition-all ${item.sold ? (isLoss ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100') : 'bg-white border-slate-100 card-shadow'}`;
                     
                     card.innerHTML = `
                         <div class="flex-1 min-w-0 pr-2">
@@ -147,8 +154,8 @@
                         </div>
                         <div class="flex items-center gap-2">
                             ${item.sold ? 
-                                `<p class="font-black text-green-600 text-sm">+$${item.profit.toFixed(2)}</p>` : 
-                                `<button onclick="sellItem(${item.id})" class="bg-blue-50 text-blue-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-sm shadow-blue-100">Sell</button>`
+                                `<p class="font-black ${profitClass} text-sm">${profitText}</p>` : 
+                                `<button onclick="sellItem(${item.id})" class="bg-blue-50 text-blue-600 text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider">Sell</button>`
                             }
                             <button onclick="deleteItem(${item.id})" class="text-slate-300 active:text-red-500 p-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
@@ -157,7 +164,10 @@
                     `;
                     list.appendChild(card);
                 });
-            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
+            
+            const totalProfitEl = document.getElementById('total-profit');
+            totalProfitEl.innerText = `$${totalProfit.toFixed(2)}`;
+            totalProfitEl.className = `text-3xl font-black ${totalProfit < 0 ? 'text-red-400' : 'text-green-400'}`;
             document.getElementById('total-spent').innerText = `$${totalSpent.toFixed(2)}`;
         }
 
