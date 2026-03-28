@@ -4,18 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SeTrack | Profit & Inventory</title>
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+        .modal.active { display: flex; }
     </style>
 </head>
 <body class="bg-slate-50 pb-24">
     <div class="max-w-md mx-auto p-4">
         <header class="flex justify-between items-center mb-6 pt-2">
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">SeTrack</h1>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
+                <button onclick="toggleTrash()" class="p-2 text-slate-400 hover:text-slate-600 relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                    <span id="trash-count" class="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full hidden">0</span>
+                </button>
                 <button onclick="exportCSV()" class="bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase">Export</button>
                 <label class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold cursor-pointer uppercase">
                     Import <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="importCSV(this)">
@@ -37,23 +42,35 @@
         </div>
 
         <div class="bg-white p-5 rounded-3xl card-shadow border border-slate-100 mb-6">
-            <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-blue-200 transition-all">
+            <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-50 rounded-2xl outline-none">
             <div class="flex gap-3 mb-4">
-                <input id="in-buy" type="number" placeholder="Cost" class="w-1/2 p-4 bg-slate-50 rounded-2xl outline-none border border-transparent focus:border-blue-200 transition-all">
-                <input id="in-tax" type="number" placeholder="Tax %" value="13" class="w-1/4 p-4 bg-slate-50 rounded-2xl outline-none text-center border border-transparent focus:border-blue-200 transition-all">
+                <input id="in-buy" type="number" placeholder="Cost" class="w-1/2 p-4 bg-slate-50 rounded-2xl outline-none">
+                <input id="in-tax" type="number" placeholder="Tax %" value="13" class="w-1/4 p-4 bg-slate-50 rounded-2xl outline-none text-center">
             </div>
-            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all shadow-lg shadow-blue-200">Add to List</button>
+            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all">Add to List</button>
         </div>
 
         <div class="mb-4">
-            <input id="search-bar" type="text" placeholder="Search inventory..." oninput="render()" class="w-full p-4 bg-white rounded-2xl outline-none border border-slate-200 text-sm shadow-sm">
+            <input id="search-bar" type="text" placeholder="Search inventory..." oninput="render()" class="w-full p-4 bg-white rounded-2xl outline-none border border-slate-200 text-sm">
         </div>
 
         <div id="item-list" class="space-y-3"></div>
     </div>
 
+    <div id="trash-modal" class="modal" onclick="if(event.target == this) toggleTrash()">
+        <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-black text-slate-800">Trash Bin</h3>
+                <button onclick="emptyTrash()" class="text-xs font-bold text-red-500 uppercase">Empty All</button>
+            </div>
+            <div id="trash-list" class="space-y-2"></div>
+            <button onclick="toggleTrash()" class="w-full mt-6 bg-slate-100 text-slate-600 font-bold py-3 rounded-2xl">Close</button>
+        </div>
+    </div>
+
     <script>
         let data = JSON.parse(localStorage.getItem('tracker_db')) || [];
+        let trash = JSON.parse(localStorage.getItem('tracker_trash')) || [];
 
         function addItem() {
             const name = document.getElementById('in-name').value;
@@ -68,8 +85,7 @@
         }
 
         function sellItem(id, currentPrice = null) {
-            const promptMsg = currentPrice ? `Edit Sale Price (Current: $${currentPrice}):` : "Enter Sale Price:";
-            const price = prompt(promptMsg);
+            const price = prompt(currentPrice ? `Edit Sale Price:` : "Enter Sale Price:");
             if (price === null || isNaN(parseFloat(price))) return;
             const item = data.find(i => i.id === id);
             item.sell = parseFloat(price);
@@ -78,11 +94,30 @@
             update();
         }
 
-        function deleteItem(id) {
-            if(confirm("Delete this item?")) {
-                data = data.filter(item => item.id !== id);
+        function moveToTrash(id) {
+            const itemIndex = data.findIndex(i => i.id === id);
+            const item = data.splice(itemIndex, 1)[0];
+            trash.push(item);
+            update();
+        }
+
+        function restoreItem(id) {
+            const itemIndex = trash.findIndex(i => i.id === id);
+            const item = trash.splice(itemIndex, 1)[0];
+            data.push(item);
+            update();
+        }
+
+        function emptyTrash() {
+            if(confirm("Permanently delete everything in trash?")) {
+                trash = [];
                 update();
             }
+        }
+
+        function toggleTrash() {
+            document.getElementById('trash-modal').classList.toggle('active');
+            renderTrash();
         }
 
         function importCSV(input) {
@@ -95,14 +130,7 @@
                     const name = c[0]?.replace(/"/g,'');
                     const cost = parseFloat(c[2]); 
                     if(name && !isNaN(cost)) {
-                        data.push({ 
-                            id: Date.now() + Math.random(), 
-                            name: name, 
-                            totalCost: cost, 
-                            sell: parseFloat(c[3]) || 0, 
-                            profit: parseFloat(c[4]) || 0, 
-                            sold: c[4] && parseFloat(c[4]) !== 0 
-                        });
+                        data.push({ id: Date.now() + Math.random(), name, totalCost: cost, sell: parseFloat(c[3]) || 0, profit: parseFloat(c[4]) || 0, sold: c[4] && parseFloat(c[4]) !== 0 });
                     }
                 });
                 update();
@@ -116,85 +144,67 @@
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url;
-            a.download = `SeTrack_Backup.csv`; a.click();
+            a.download = `SeTrack_Export.csv`; a.click();
         }
 
         function update() {
             localStorage.setItem('tracker_db', JSON.stringify(data));
+            localStorage.setItem('tracker_trash', JSON.stringify(trash));
             render();
+            renderTrash();
+        }
+
+        function renderTrash() {
+            const tList = document.getElementById('trash-list');
+            const count = document.getElementById('trash-count');
+            tList.innerHTML = trash.length ? '' : '<p class="text-center text-slate-400 py-8 text-sm">Trash is empty</p>';
+            trash.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-3 bg-slate-50 rounded-2xl border border-slate-100";
+                div.innerHTML = `<div class="min-w-0 flex-1"><p class="text-xs font-bold truncate">${item.name}</p></div>
+                                 <button onclick="restoreItem(${item.id})" class="text-[10px] font-black text-blue-600 px-3 py-1 bg-blue-50 rounded-lg ml-2">RESTORE</button>`;
+                tList.appendChild(div);
+            });
+            count.innerText = trash.length;
+            count.classList.toggle('hidden', trash.length === 0);
         }
 
         function render() {
             const list = document.getElementById('item-list');
             const search = document.getElementById('search-bar').value.toLowerCase();
-            let totalProfit = 0;
-            let totalSpent = 0;
+            let totalProfit = 0, totalSpent = 0;
             list.innerHTML = '';
             
-            data.filter(i => i.name.toLowerCase().includes(search))
-                .sort((a,b) => b.id - a.id)
-                .forEach(item => {
-                    totalSpent += item.totalCost;
-                    if(item.sold) totalProfit += item.profit;
+            data.filter(i => i.name.toLowerCase().includes(search)).sort((a,b) => b.id - a.id).forEach(item => {
+                totalSpent += item.totalCost;
+                if(item.sold) totalProfit += item.profit;
 
-                    const isLoss = item.profit < 0;
-                    const isHighProfit = item.profit > item.totalCost; 
-                    const roi = ((item.profit / item.totalCost) * 100).toFixed(0);
-                    
-                    const profitText = isLoss 
-                        ? `-$${Math.abs(item.profit).toFixed(2)}` 
-                        : `+$${item.profit.toFixed(2)}`;
+                const isLoss = item.profit < 0;
+                const roi = ((item.profit / item.totalCost) * 100).toFixed(0);
+                const profitText = isLoss ? `-$${Math.abs(item.profit).toFixed(2)}` : `+$${item.profit.toFixed(2)}`;
+                const profitColor = isLoss ? 'text-red-500' : (item.profit > item.totalCost ? 'text-emerald-900' : 'text-green-600');
+                const cardClass = item.sold ? (isLoss ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100') : 'bg-white border-slate-100 card-shadow';
 
-                    let cardClass = "bg-white border-slate-100 card-shadow";
-                    let profitColorClass = "text-green-600";
-
-                    if(item.sold) {
-                        if(isLoss) {
-                            cardClass = "bg-red-50 border-red-100";
-                            profitColorClass = "text-red-500";
-                        } else if(isHighProfit) {
-                            cardClass = "bg-green-50 border-green-100"; 
-                            profitColorClass = "text-emerald-900"; 
-                        } else {
-                            cardClass = "bg-green-50 border-green-100";
-                            profitColorClass = "text-green-600";
-                        }
-                    }
-
-                    const card = document.createElement('div');
-                    card.className = `p-4 rounded-3xl flex justify-between items-center border transition-all ${cardClass}`;
-                    
-                    card.innerHTML = `
-                        <div class="flex-1 min-w-0 pr-2">
-                            <p class="font-bold text-slate-800 truncate text-sm">${item.name}</p>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">$${item.totalCost.toFixed(2)} cost</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            ${item.sold ? 
-                                `<div class="text-right">
-                                    <button onclick="sellItem(${item.id}, ${item.sell})" class="block font-black ${profitColorClass} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
-                                    <span class="text-[9px] font-bold ${profitColorClass} opacity-80 uppercase tracking-tighter">${roi}% ROI</span>
-                                 </div>` : 
-                                `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider">Sell</button>`
-                            }
-                            <button onclick="deleteItem(${item.id})" class="text-slate-300 active:text-red-500 p-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                            </button>
-                        </div>
-                    `;
-                    list.appendChild(card);
-                });
-            
-            const tpEl = document.getElementById('total-profit');
-            tpEl.innerText = `$${totalProfit.toFixed(2)}`;
-            tpEl.className = `text-3xl font-black ${totalProfit < 0 ? 'text-red-400' : 'text-green-400'}`;
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-3xl flex justify-between items-center border transition-all ${cardClass}`;
+                card.innerHTML = `
+                    <div class="flex-1 min-w-0 pr-2">
+                        <p class="font-bold text-slate-800 truncate text-sm">${item.name}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">$${item.totalCost.toFixed(2)} cost</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${item.sold ? `<div class="text-right"><button onclick="sellItem(${item.id}, ${item.sell})" class="block font-black ${profitColor} text-sm leading-none mb-1">${profitText}</button>
+                        <span class="text-[9px] font-bold ${profitColor} opacity-80 uppercase tracking-tighter">${roi}% ROI</span></div>` : 
+                        `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl">Sell</button>`}
+                        <button onclick="moveToTrash(${item.id})" class="text-slate-300 p-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                    </div>`;
+                list.appendChild(card);
+            });
+            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
             document.getElementById('total-spent').innerText = `$${totalSpent.toFixed(2)}`;
+            document.getElementById('total-profit').className = `text-3xl font-black ${totalProfit < 0 ? 'text-red-400' : 'text-green-400'}`;
         }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
-        }
-        render();
+        update();
     </script>
 </body>
 </html>
