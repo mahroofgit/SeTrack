@@ -84,8 +84,29 @@
             document.getElementById('in-buy').value = '';
         }
 
-        function sellItem(id, currentPrice = null) {
-            const price = prompt(currentPrice ? `Edit Sale Price:` : "Enter Sale Price:");
+        function editSale(id, currentPrice) {
+            const action = confirm("Tap OK to edit Sale Price, or Cancel to Reset item to Unsold.");
+            if (action) {
+                const price = prompt("Enter new Sale Price:", currentPrice);
+                if (price !== null && !isNaN(parseFloat(price))) {
+                    const item = data.find(i => i.id === id);
+                    item.sell = parseFloat(price);
+                    item.profit = item.sell - item.totalCost;
+                    update();
+                }
+            } else {
+                if (confirm("Reset this item to Unsold? Profit will be cleared.")) {
+                    const item = data.find(i => i.id === id);
+                    item.sold = false;
+                    item.sell = 0;
+                    item.profit = 0;
+                    update();
+                }
+            }
+        }
+
+        function sellItem(id) {
+            const price = prompt("Enter Sale Price:");
             if (price === null || isNaN(parseFloat(price))) return;
             const item = data.find(i => i.id === id);
             item.sell = parseFloat(price);
@@ -175,18 +196,17 @@
             let totalProfit = 0, totalSpent = 0;
             list.innerHTML = '';
             
-            // SORTING LOGIC: Unsold first, then by Newest ID
-            const sortedData = data.filter(i => i.name.toLowerCase().includes(search)).sort((a, b) => {
+            const filtered = data.filter(i => i.name.toLowerCase().includes(search)).sort((a, b) => {
                 if (a.sold !== b.sold) return a.sold ? 1 : -1;
                 return b.id - a.id;
             });
 
-            sortedData.forEach(item => {
+            filtered.forEach(item => {
                 totalSpent += item.totalCost;
                 if(item.sold) totalProfit += item.profit;
 
                 const isLoss = item.profit < 0;
-                const roi = ((item.profit / item.totalCost) * 100).toFixed(0);
+                const roi = item.totalCost > 0 ? ((item.profit / item.totalCost) * 100).toFixed(0) : 0;
                 const profitText = isLoss ? `-$${Math.abs(item.profit).toFixed(2)}` : `+$${item.profit.toFixed(2)}`;
                 const profitColor = isLoss ? 'text-red-500' : (item.profit > item.totalCost ? 'text-emerald-900' : 'text-green-600');
                 const cardClass = item.sold ? (isLoss ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100') : 'bg-white border-slate-100 card-shadow';
@@ -200,7 +220,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         ${item.sold ? `<div class="text-right">
-                                    <button onclick="sellItem(${item.id}, ${item.sell})" class="block font-black ${profitColor} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
+                                    <button onclick="editSale(${item.id}, ${item.sell})" class="block font-black ${profitColor} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
                                     <span class="text-[9px] font-bold ${profitColor} opacity-80 uppercase tracking-tighter">${roi}% ROI</span>
                                  </div>` : 
                         `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-sm">Sell</button>`}
