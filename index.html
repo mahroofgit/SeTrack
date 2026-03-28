@@ -9,10 +9,6 @@
     <style>
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
-        /* Custom Dark Green for high profit */
-        .bg-high-profit { background-color: #065f46; color: white; border-color: #064e3b; }
-        .bg-high-profit .text-slate-800, .bg-high-profit .text-slate-400 { color: rgba(255,255,255,0.9); }
-        .bg-high-profit .text-green-600 { color: #34d399; }
     </style>
 </head>
 <body class="bg-slate-50 pb-24">
@@ -142,25 +138,26 @@
                     if(item.sold) totalProfit += item.profit;
 
                     const isLoss = item.profit < 0;
-                    const isHighProfit = item.profit > item.totalCost; // > 100% ROI
+                    const isHighProfit = item.profit > item.totalCost; 
+                    const roi = ((item.profit / item.totalCost) * 100).toFixed(0);
                     
                     const profitText = isLoss 
                         ? `-$${Math.abs(item.profit).toFixed(2)}` 
                         : `+$${item.profit.toFixed(2)}`;
 
                     let cardClass = "bg-white border-slate-100 card-shadow";
-                    let profitColor = "text-green-600";
+                    let profitColorClass = "text-green-600";
 
                     if(item.sold) {
                         if(isLoss) {
                             cardClass = "bg-red-50 border-red-100";
-                            profitColor = "text-red-500";
+                            profitColorClass = "text-red-500";
                         } else if(isHighProfit) {
-                            cardClass = "bg-high-profit shadow-lg"; // Dark Green
-                            profitColor = "text-emerald-300";
+                            cardClass = "bg-green-50 border-green-100"; 
+                            profitColorClass = "text-emerald-900"; 
                         } else {
-                            cardClass = "bg-green-50 border-green-100"; // Light Green
-                            profitColor = "text-green-600";
+                            cardClass = "bg-green-50 border-green-100";
+                            profitColorClass = "text-green-600";
                         }
                     }
 
@@ -169,15 +166,18 @@
                     
                     card.innerHTML = `
                         <div class="flex-1 min-w-0 pr-2">
-                            <p class="font-bold truncate text-sm">${item.name}</p>
-                            <p class="text-[10px] font-bold opacity-60 uppercase tracking-tight">$${item.totalCost.toFixed(2)} cost</p>
+                            <p class="font-bold text-slate-800 truncate text-sm">${item.name}</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">$${item.totalCost.toFixed(2)} cost</p>
                         </div>
                         <div class="flex items-center gap-2">
                             ${item.sold ? 
-                                `<button onclick="sellItem(${item.id}, ${item.sell})" class="font-black ${profitColor} text-sm active:scale-95 transition-transform">${profitText}</button>` : 
-                                `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-sm">Sell</button>`
+                                `<div class="text-right">
+                                    <button onclick="sellItem(${item.id}, ${item.sell})" class="block font-black ${profitColorClass} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
+                                    <span class="text-[9px] font-bold ${profitColorClass} opacity-80 uppercase tracking-tighter">${roi}% ROI</span>
+                                 </div>` : 
+                                `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider">Sell</button>`
                             }
-                            <button onclick="deleteItem(${item.id})" class="opacity-30 hover:opacity-100 active:text-red-500 p-2">
+                            <button onclick="deleteItem(${item.id})" class="text-slate-300 active:text-red-500 p-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                             </button>
                         </div>
