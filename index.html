@@ -8,11 +8,11 @@
     <style>
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
         .card-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; align-items: center; justify-content: center; padding: 1.5rem; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
     </style>
 </head>
-<body class="bg-slate-50 pb-24">
+<body class="bg-slate-50 pb-24 text-slate-900">
     <div class="max-w-md mx-auto p-4">
         <header class="flex justify-between items-center mb-6 pt-2">
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">SeTrack</h1>
@@ -57,6 +57,25 @@
         <div id="item-list" class="space-y-3"></div>
     </div>
 
+    <div id="action-modal" class="modal" onclick="if(event.target == this) closeActionModal()">
+        <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl overflow-hidden">
+            <h3 id="modal-item-name" class="text-lg font-black text-slate-800 mb-1 truncate">Item Name</h3>
+            <p id="modal-item-cost" class="text-xs font-bold text-slate-400 uppercase mb-6">$0.00 cost</p>
+            
+            <div class="space-y-3">
+                <button onclick="triggerEditPrice()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>
+                    Edit Sale Price
+                </button>
+                <button onclick="triggerResetToUnsold()" class="w-full bg-slate-100 text-slate-600 font-bold py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                    Reset to Unsold
+                </button>
+                <button onclick="closeActionModal()" class="w-full text-slate-400 font-bold py-3 rounded-2xl text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="trash-modal" class="modal" onclick="if(event.target == this) toggleTrash()">
         <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
@@ -71,6 +90,7 @@
     <script>
         let data = JSON.parse(localStorage.getItem('tracker_db')) || [];
         let trash = JSON.parse(localStorage.getItem('tracker_trash')) || [];
+        let activeItemId = null;
 
         function addItem() {
             const name = document.getElementById('in-name').value;
@@ -84,26 +104,42 @@
             document.getElementById('in-buy').value = '';
         }
 
-        function editSale(id, currentPrice) {
-            const action = confirm("Tap OK to edit Sale Price, or Cancel to Reset item to Unsold.");
-            if (action) {
-                const price = prompt("Enter new Sale Price:", currentPrice);
-                if (price !== null && !isNaN(parseFloat(price))) {
-                    const item = data.find(i => i.id === id);
-                    item.sell = parseFloat(price);
-                    item.profit = item.sell - item.totalCost;
-                    update();
-                }
-            } else {
-                if (confirm("Reset this item to Unsold? Profit will be cleared.")) {
-                    const item = data.find(i => i.id === id);
-                    item.sold = false;
-                    item.sell = 0;
-                    item.profit = 0;
-                    update();
-                }
+        // --- MODAL LOGIC ---
+        function openActionModal(id) {
+            const item = data.find(i => i.id === id);
+            activeItemId = id;
+            document.getElementById('modal-item-name').innerText = item.name;
+            document.getElementById('modal-item-cost').innerText = `$${item.totalCost.toFixed(2)} cost`;
+            document.getElementById('action-modal').classList.add('active');
+        }
+
+        function closeActionModal() {
+            document.getElementById('action-modal').classList.remove('active');
+            activeItemId = null;
+        }
+
+        function triggerEditPrice() {
+            const item = data.find(i => i.id === activeItemId);
+            const price = prompt("Enter new Sale Price:", item.sell);
+            if (price !== null && !isNaN(parseFloat(price))) {
+                item.sell = parseFloat(price);
+                item.profit = item.sell - item.totalCost;
+                closeActionModal();
+                update();
             }
         }
+
+        function triggerResetToUnsold() {
+            if (confirm("Move this item back to your active inventory? This will clear its sale profit.")) {
+                const item = data.find(i => i.id === activeItemId);
+                item.sold = false;
+                item.sell = 0;
+                item.profit = 0;
+                closeActionModal();
+                update();
+            }
+        }
+        // ------------------
 
         function sellItem(id) {
             const price = prompt("Enter Sale Price:");
@@ -220,7 +256,7 @@
                     </div>
                     <div class="flex items-center gap-2">
                         ${item.sold ? `<div class="text-right">
-                                    <button onclick="editSale(${item.id}, ${item.sell})" class="block font-black ${profitColor} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
+                                    <button onclick="openActionModal(${item.id})" class="block font-black ${profitColor} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
                                     <span class="text-[9px] font-bold ${profitColor} opacity-80 uppercase tracking-tighter">${roi}% ROI</span>
                                  </div>` : 
                         `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-sm">Sell</button>`}
