@@ -31,7 +31,7 @@
                 <h2 id="total-profit" class="text-4xl font-black tracking-tighter">$0.00</h2>
             </div>
             <div class="text-right">
-                <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Total Paid</p>
+                <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Total Investment</p>
                 <p id="total-paid-display" class="text-xl font-bold opacity-90">$0.00</p>
             </div>
         </div>
@@ -155,17 +155,17 @@
             const list = document.getElementById('item-list');
             const trashList = document.getElementById('trash-list');
             let totalProfit = 0;
-            let totalPaid = 0;
+            let totalInvestment = 0;
             list.innerHTML = '';
             trashList.innerHTML = '';
 
-            // Calculate totals from ALL data regardless of tab
-            data.filter(i => i.sold).forEach(item => {
-                totalProfit += item.profit;
-                totalPaid += item.totalPaid;
+            // Calculate total profit from sold items
+            // Calculate total investment from ALL items (Sold + Unsold)
+            data.forEach(item => {
+                if(item.sold) totalProfit += item.profit;
+                totalInvestment += item.totalPaid;
             });
 
-            // Filter items based on active tab
             const filteredData = data.filter(item => {
                 return currentTab === 'inventory' ? !item.sold : item.sold;
             }).sort((a,b) => b.id - a.id);
@@ -211,7 +211,7 @@
             });
 
             document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
-            document.getElementById('total-paid-display').innerText = `$${totalPaid.toFixed(2)}`;
+            document.getElementById('total-paid-display').innerText = `$${totalInvestment.toFixed(2)}`;
             document.getElementById('trash-count').innerText = trash.length;
         }
 
