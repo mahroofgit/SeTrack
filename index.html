@@ -175,7 +175,13 @@
             let totalProfit = 0, totalSpent = 0;
             list.innerHTML = '';
             
-            data.filter(i => i.name.toLowerCase().includes(search)).sort((a,b) => b.id - a.id).forEach(item => {
+            // SORTING LOGIC: Unsold first, then by Newest ID
+            const sortedData = data.filter(i => i.name.toLowerCase().includes(search)).sort((a, b) => {
+                if (a.sold !== b.sold) return a.sold ? 1 : -1;
+                return b.id - a.id;
+            });
+
+            sortedData.forEach(item => {
                 totalSpent += item.totalCost;
                 if(item.sold) totalProfit += item.profit;
 
@@ -190,19 +196,23 @@
                 card.innerHTML = `
                     <div class="flex-1 min-w-0 pr-2">
                         <p class="font-bold text-slate-800 truncate text-sm">${item.name}</p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase">$${item.totalCost.toFixed(2)} cost</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">$${item.totalCost.toFixed(2)} cost</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        ${item.sold ? `<div class="text-right"><button onclick="sellItem(${item.id}, ${item.sell})" class="block font-black ${profitColor} text-sm leading-none mb-1">${profitText}</button>
-                        <span class="text-[9px] font-bold ${profitColor} opacity-80 uppercase tracking-tighter">${roi}% ROI</span></div>` : 
-                        `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl">Sell</button>`}
-                        <button onclick="moveToTrash(${item.id})" class="text-slate-300 p-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                        ${item.sold ? `<div class="text-right">
+                                    <button onclick="sellItem(${item.id}, ${item.sell})" class="block font-black ${profitColor} text-sm active:scale-95 transition-transform leading-none mb-1">${profitText}</button>
+                                    <span class="text-[9px] font-bold ${profitColor} opacity-80 uppercase tracking-tighter">${roi}% ROI</span>
+                                 </div>` : 
+                        `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-sm">Sell</button>`}
+                        <button onclick="moveToTrash(${item.id})" class="text-slate-300 active:text-red-500 p-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
                     </div>`;
                 list.appendChild(card);
             });
-            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
+            
+            const tpEl = document.getElementById('total-profit');
+            tpEl.innerText = `$${totalProfit.toFixed(2)}`;
+            tpEl.className = `text-3xl font-black ${totalProfit < 0 ? 'text-red-400' : 'text-green-400'}`;
             document.getElementById('total-spent').innerText = `$${totalSpent.toFixed(2)}`;
-            document.getElementById('total-profit').className = `text-3xl font-black ${totalProfit < 0 ? 'text-red-400' : 'text-green-400'}`;
         }
         update();
     </script>
