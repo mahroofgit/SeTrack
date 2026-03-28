@@ -76,6 +76,24 @@
             update();
         }
 
+        function editItem(id) {
+            const item = data.find(i => i.id === id);
+            if (item.sold) {
+                const newSale = prompt("Update Sale Price:", item.sell);
+                if(newSale !== null && !isNaN(parseFloat(newSale))) {
+                    item.sell = parseFloat(newSale);
+                    item.profit = item.sell - item.totalPaid;
+                    update();
+                }
+            } else {
+                const newName = prompt("Rename item:", item.name);
+                if(newName) {
+                    item.name = newName;
+                    update();
+                }
+            }
+        }
+
         function sellItem(id) {
             const price = prompt("Sale Price?");
             if (price === null || isNaN(parseFloat(price))) return;
@@ -116,18 +134,20 @@
             sortedData.forEach(item => {
                 if(item.sold) totalProfit += item.profit;
                 const card = document.createElement('div');
-                card.className = `p-4 rounded-2xl flex justify-between items-center border ${item.sold ? 'bg-slate-100' : 'bg-white shadow-sm'}`;
+                card.className = `p-4 rounded-2xl flex justify-between items-center border ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
                 card.innerHTML = `
-                    <div class="flex-1 pr-4">
+                    <div class="flex-1 pr-4" onclick="editItem(${item.id})">
                         <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
                         <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase">
-                            Shelf: $${item.listedPrice.toFixed(2)} | Paid: $${item.totalPaid.toFixed(2)}
+                            Shelf: $${(item.listedPrice || 0).toFixed(2)} | Paid: $${item.totalPaid.toFixed(2)}
                             ${item.sold ? ` | <span class="text-blue-600">Sold: $${item.sell.toFixed(2)}</span>` : ''}
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
                         ${item.sold ? `<p class="font-black text-green-600 text-sm">+$${item.profit.toFixed(2)}</p>` : `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>`}
-                        <button onclick="moveToTrash(${item.id})" class="text-slate-300">×</button>
+                        <button onclick="moveToTrash(${item.id})" class="text-slate-300 hover:text-red-500">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                        </button>
                     </div>
                 `;
                 list.appendChild(card);
@@ -135,13 +155,43 @@
 
             trash.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "flex justify-between items-center text-xs p-2 bg-slate-200 rounded-lg";
-                card.innerHTML = `<span>${item.name}</span><button onclick="restoreItem(${item.id})" class="text-blue-600 font-bold">Restore</button>`;
+                card.className = "flex justify-between items-center text-xs p-3 bg-slate-200 rounded-xl mb-2";
+                card.innerHTML = `<span class="truncate pr-4">${item.name}</span><button onclick="restoreItem(${item.id})" class="text-blue-600 font-bold uppercase text-[10px]">Restore</button>`;
                 trashList.appendChild(card);
             });
 
             document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
             document.getElementById('trash-count').innerText = trash.length;
+        }
+
+        function exportCSV() {
+            let csv = "Name,ListedPrice,TotalPaid,Sell,Profit,Sold\n";
+            data.forEach(i => csv += `"${i.name}",${(i.listedPrice||0).toFixed(2)},${i.totalPaid.toFixed(2)},${i.sell.toFixed(2)},${i.profit.toFixed(2)},${i.sold}\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `tracker_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+        }
+
+        function importCSV(input) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const rows = e.target.result.split('\n').slice(1);
+                rows.forEach(row => {
+                    const c = row.split(',');
+                    if(c.length < 4) return;
+                    data.push({ 
+                        id: Date.now() + Math.random(), 
+                        name: c[0].replace(/"/g,''), 
+                        listedPrice: parseFloat(c[1]) || 0,
+                        totalPaid: parseFloat(c[2]) || parseFloat(c[1]) * 1.13, 
+                        sell: parseFloat(c[3]) || 0, 
+                        profit: parseFloat(c[4]) || 0, 
+                        sold: c[5]?.trim().toLowerCase() === 'true' 
+                    });
+                });
+                update();
+            };
+            reader.readAsText(input.files[0]);
         }
 
         render();
