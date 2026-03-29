@@ -11,7 +11,6 @@
         .item-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; line-height: 1.2; }
         .high-roi { color: #064e3b; font-weight: 900; }
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
-        /* Smooth transitions for the modal */
         #sale-overlay { transition: opacity 0.2s ease; }
         .modal-content { transform: scale(0.9); transition: transform 0.2s ease; }
         #sale-overlay:not(.hidden) .modal-content { transform: scale(1); }
@@ -62,7 +61,7 @@
                 </div>
             </div>
             
-            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all uppercase shadow-lg shadow-blue-100">Add to Inventory</button>
+            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all uppercase">Add to Inventory</button>
         </div>
 
         <div id="item-list" class="space-y-6"></div>
@@ -140,7 +139,6 @@
             update();
         }
 
-        // Sale Modal Logic
         function sellItem(id) {
             activeSaleId = id;
             const modal = document.getElementById('sale-overlay');
@@ -159,7 +157,6 @@
             const input = document.getElementById('modal-sell-input');
             const price = parseFloat(input.value);
             if (isNaN(price)) return;
-
             const item = data.find(i => i.id === activeSaleId);
             if (item) {
                 item.sell = price;
@@ -173,20 +170,8 @@
         function editItem(id) {
             const item = data.find(i => i.id === id);
             if (!item) return;
-            if (item.sold) {
-                const newSale = prompt("Update Sale Price:", item.sell);
-                if(newSale !== null && !isNaN(parseFloat(newSale))) {
-                    item.sell = parseFloat(newSale);
-                    item.profit = item.sell - item.totalPaid;
-                    update();
-                }
-            } else {
-                const newName = prompt("Rename item:", item.name);
-                if(newName) {
-                    item.name = newName;
-                    update();
-                }
-            }
+            const newName = prompt("Edit name:", item.name);
+            if(newName) { item.name = newName; update(); }
         }
 
         function moveToTrash(id) {
@@ -204,18 +189,14 @@
         }
 
         function permanentDelete(id) {
-            const item = trash.find(i => i.id === id);
-            if (confirm(`Permanently delete "${item.name}"?`)) {
+            if (confirm(`Permanently delete?`)) {
                 trash = trash.filter(i => i.id !== id);
                 update();
             }
         }
 
         function emptyTrash() {
-            if (confirm("Permanently delete ALL items in trash?")) {
-                trash = [];
-                update();
-            }
+            if (confirm("Empty all trash?")) { trash = []; update(); }
         }
 
         function toggleTrash() {
@@ -223,28 +204,6 @@
             const btn = document.getElementById('btn-empty-trash');
             list.classList.toggle('hidden');
             btn.classList.toggle('hidden', list.classList.contains('hidden'));
-        }
-
-        function render() {
-            const list = document.getElementById('item-list');
-            const trashList = document.getElementById('trash-list');
-            let totalProfit = 0;
-            let totalInvestment = 0;
-            list.innerHTML = '';
-            trashList.innerHTML = '';
-
-            data.forEach(item => {
-                if(item.sold) totalProfit += item.profit;
-                totalInvestment += item.totalPaid;
-            });
-
-            const filteredData = data.filter(item => currentTab === 'inventory' ? !item.sold : item.sold);
-            renderGroupedList(filteredData, list, false);
-            renderGroupedList(trash, trashList, true);
-
-            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
-            document.getElementById('total-paid-display').innerText = `$${totalInvestment.toFixed(2)}`;
-            document.getElementById('trash-count').innerText = trash.length;
         }
 
         function renderGroupedList(items, container, isTrash) {
@@ -263,60 +222,41 @@
                 dateHeader.innerHTML = `<span class="bg-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">${date}</span>`;
                 container.appendChild(dateHeader);
 
-                const sortedItems = groups[date].sort((a,b) => a.name.localeCompare(b.name));
-
-                sortedItems.forEach(item => {
+                groups[date].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
                     const card = document.createElement('div');
                     if (isTrash) {
                         card.className = "p-4 bg-slate-200/50 border border-slate-300 rounded-2xl opacity-80 mb-2";
-                        card.innerHTML = `
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="truncate pr-4 font-bold text-slate-700">${item.name}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="restoreItem(${item.id})" class="flex-1 bg-white text-blue-600 font-black uppercase text-[9px] py-2 rounded-xl shadow-sm border border-slate-200">Restore</button>
-                                <button onclick="permanentDelete(${item.id})" class="flex-1 bg-red-50 text-red-600 font-black uppercase text-[9px] py-2 rounded-xl border border-red-100">Delete</button>
-                            </div>
-                        `;
+                        card.innerHTML = `<div class="font-bold text-slate-700 mb-2">${item.name}</div><div class="flex gap-2"><button onclick="restoreItem(${item.id})" class="flex-1 bg-white text-blue-600 font-black uppercase text-[9px] py-2 rounded-xl border border-slate-200">Restore</button><button onclick="permanentDelete(${item.id})" class="flex-1 bg-red-50 text-red-600 font-black uppercase text-[9px] py-2 rounded-xl border border-red-100">Delete</button></div>`;
                     } else {
                         const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
                         let profitClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
                         card.className = `p-4 rounded-2xl flex justify-between items-center border mb-2 ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
-                        card.innerHTML = `
-                            <div class="flex-1 pr-4" onclick="editItem(${item.id})">
-                                <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
-                                <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
-                                    Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}
-                                    ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                ${item.sold ? `
-                                    <div class="text-right">
-                                        <p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
-                                        <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
-                                    </div>
-                                ` : `
-                                    <button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>
-                                `}
-                                <button onclick="moveToTrash(${item.id})" class="text-slate-300">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                                </button>
-                            </div>
-                        `;
+                        card.innerHTML = `<div class="flex-1 pr-4" onclick="editItem(${item.id})"><p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p><div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}</div></div><div class="flex items-center gap-3">${item.sold ? `<div class="text-right"><p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p></div>` : `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>`}<button onclick="moveToTrash(${item.id})" class="text-slate-300"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div>`;
                     }
                     container.appendChild(card);
                 });
             });
         }
 
+        function render() {
+            const list = document.getElementById('item-list');
+            const trashList = document.getElementById('trash-list');
+            let totalProfit = 0, totalInvestment = 0;
+            list.innerHTML = ''; trashList.innerHTML = '';
+            data.forEach(item => { if(item.sold) totalProfit += item.profit; totalInvestment += item.totalPaid; });
+            renderGroupedList(data.filter(item => currentTab === 'inventory' ? !item.sold : item.sold), list, false);
+            renderGroupedList(trash, trashList, true);
+            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
+            document.getElementById('total-paid-display').innerText = `$${totalInvestment.toFixed(2)}`;
+            document.getElementById('trash-count').innerText = trash.length;
+        }
+
         function importCSV(input) {
+            if (!input.files || !input.files[0]) return;
             const today = new Date().toLocaleDateString('en-CA');
             const manualDate = prompt("Date for this batch? (YYYY-MM-DD):", today);
-            if (manualDate === null) {
-                input.value = '';
-                return; 
-            }
+            if (manualDate === null) { input.value = ''; return; }
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const rows = e.target.result.split('\n').slice(1);
@@ -334,6 +274,7 @@
                         sold: c[5]?.trim().toLowerCase() === 'true' 
                     });
                 });
+                input.value = ''; // FIX: Reset input so the same file can be imported again
                 update();
             };
             reader.readAsText(input.files[0]);
@@ -347,12 +288,7 @@
             const a = document.createElement('a'); a.href = url; a.download = `SeTrack_Export.csv`; a.click();
         }
 
-        // Close modal if clicking outside the box
-        window.onclick = function(event) {
-            const modal = document.getElementById('sale-overlay');
-            if (event.target == modal) closeSaleModal();
-        }
-
+        window.onclick = function(event) { if (event.target == document.getElementById('sale-overlay')) closeSaleModal(); }
         render();
     </script>
 </body>
