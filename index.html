@@ -33,11 +33,11 @@
         
         <div class="bg-slate-900 text-white p-6 rounded-3xl shadow-xl mb-6 flex justify-between items-end">
             <div>
-                <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Total Net Profit</p>
+                <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Net Profit</p>
                 <h2 id="total-profit" class="text-4xl font-black tracking-tighter">$0.00</h2>
             </div>
             <div class="text-right">
-                <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Total Investment</p>
+                <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Total Cost</p>
                 <p id="total-paid-display" class="text-xl font-bold opacity-90">$0.00</p>
             </div>
         </div>
@@ -46,7 +46,7 @@
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none">
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Shelf Price</label>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Bid Price</label>
                     <input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" class="w-full p-4 bg-slate-100 rounded-2xl outline-none">
                 </div>
                 <div>
@@ -135,10 +135,9 @@
             render();
         }
 
-        // --- NEW: BACKUP & RESTORE LOGIC ---
         function exportBackup() {
             const backup = {
-                version: "2.0",
+                version: "2.1",
                 timestamp: new Date().toISOString(),
                 data: data,
                 trash: trash
@@ -153,7 +152,7 @@
 
         function restoreBackup(input) {
             if (!input.files || !input.files[0]) return;
-            if (!confirm("This will overwrite ALL current data with the backup file. Continue?")) {
+            if (!confirm("Restore backup? Current data will be replaced.")) {
                 input.value = ''; return;
             }
             const reader = new FileReader();
@@ -164,25 +163,19 @@
                         data = backup.data;
                         trash = backup.trash;
                         update();
-                        alert("System Restore Successful!");
-                    } else {
-                        alert("Invalid backup file format.");
+                        alert("Restore Successful!");
                     }
-                } catch (err) {
-                    alert("Error reading backup file.");
-                }
+                } catch (err) { alert("Error reading backup."); }
                 input.value = '';
             };
             reader.readAsText(input.files[0]);
         }
 
-        // --- NEW: BATCH ADD (+) LOGIC ---
         function batchAddItems(input) {
             if (!input.files || !input.files[0]) return;
             const today = new Date().toLocaleDateString('en-CA');
-            const manualDate = prompt("Date for this new invoice? (YYYY-MM-DD):", today);
+            const manualDate = prompt("Invoice Date? (YYYY-MM-DD):", today);
             if (manualDate === null) { input.value = ''; return; }
-            
             const reader = new FileReader();
             reader.onload = function(e) {
                 const rows = e.target.result.split('\n').slice(1);
@@ -200,9 +193,7 @@
                         sold: c[5]?.trim().toLowerCase() === 'true' 
                     });
                 });
-                input.value = ''; 
-                update();
-                alert("New invoice added successfully!");
+                input.value = ''; update(); alert("Invoice added.");
             };
             reader.readAsText(input.files[0]);
         }
@@ -290,7 +281,6 @@
         function renderGroupedList(items, container, isTrash) {
             const query = document.getElementById('search-input').value.toLowerCase();
             const filtered = items.filter(i => i.name.toLowerCase().includes(query));
-            
             const groups = filtered.reduce((acc, item) => {
                 const d = item.date || "Legacy";
                 if (!acc[d]) acc[d] = [];
@@ -313,7 +303,7 @@
                         const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
                         let profitClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
                         card.className = `p-4 rounded-2xl flex justify-between items-center border mb-2 ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
-                        card.innerHTML = `<div class="flex-1 pr-4" onclick="editItem(${item.id})"><p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p><div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Shelf: $${item.listedPrice.toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}</div></div><div class="flex items-center gap-3">${item.sold ? `<div class="text-right"><p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p></div>` : `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>`}<button onclick="moveToTrash(${item.id})" class="text-slate-300"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div>`;
+                        card.innerHTML = `<div class="flex-1 pr-4" onclick="editItem(${item.id})"><p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p><div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Bid: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}</div></div><div class="flex items-center gap-3">${item.sold ? `<div class="text-right"><p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p></div>` : `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>`}<button onclick="moveToTrash(${item.id})" class="text-slate-300"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div>`;
                     }
                     container.appendChild(card);
                 });
