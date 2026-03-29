@@ -64,10 +64,13 @@
         <div id="item-list" class="space-y-6"></div>
 
         <div id="trash-section" class="mt-12 pt-8 border-t border-slate-200">
-            <button onclick="toggleTrash()" class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                View Trash (<span id="trash-count">0</span>)
-            </button>
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="toggleTrash()" class="text-slate-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                    View Trash (<span id="trash-count">0</span>)
+                </button>
+                <button id="btn-empty-trash" onclick="emptyTrash()" class="hidden text-red-500 text-[10px] font-black uppercase tracking-widest">Empty Trash</button>
+            </div>
             <div id="trash-list" class="hidden space-y-4"></div>
         </div>
     </div>
@@ -163,8 +166,28 @@
             update();
         }
 
+        // PERMANENT DELETE LOGIC
+        function permanentDelete(id) {
+            const item = trash.find(i => i.id === id);
+            if (confirm(`Are you sure you want to permanently delete "${item.name}"? This cannot be undone.`)) {
+                trash = trash.filter(i => i.id !== id);
+                update();
+            }
+        }
+
+        function emptyTrash() {
+            if (trash.length === 0) return;
+            if (confirm("Are you sure you want to delete ALL items in the trash permanently?")) {
+                trash = [];
+                update();
+            }
+        }
+
         function toggleTrash() {
-            document.getElementById('trash-list').classList.toggle('hidden');
+            const list = document.getElementById('trash-list');
+            const btn = document.getElementById('btn-empty-trash');
+            list.classList.toggle('hidden');
+            btn.classList.toggle('hidden', list.classList.contains('hidden'));
         }
 
         function render() {
@@ -180,11 +203,8 @@
                 totalInvestment += item.totalPaid;
             });
 
-            // 1. Render Main List (Grouped by Date)
             const filteredData = data.filter(item => currentTab === 'inventory' ? !item.sold : item.sold);
             renderGroupedList(filteredData, list, false);
-
-            // 2. Render Trash List (Grouped by Date)
             renderGroupedList(trash, trashList, true);
 
             document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
@@ -192,7 +212,6 @@
             document.getElementById('trash-count').innerText = trash.length;
         }
 
-        // Shared helper for date-based grouping
         function renderGroupedList(items, container, isTrash) {
             const groups = items.reduce((acc, item) => {
                 const d = item.date || "Legacy";
@@ -214,10 +233,16 @@
                 sortedItems.forEach(item => {
                     const card = document.createElement('div');
                     if (isTrash) {
-                        card.className = "flex justify-between items-center text-xs p-4 bg-slate-200/50 border border-slate-300 rounded-2xl opacity-70";
+                        card.className = "p-4 bg-slate-200/50 border border-slate-300 rounded-2xl opacity-80 mb-2";
                         card.innerHTML = `
-                            <span class="truncate pr-4 font-semibold text-slate-600">${item.name}</span>
-                            <button onclick="restoreItem(${item.id})" class="text-blue-600 font-black uppercase text-[10px] bg-white px-3 py-1 rounded-lg shadow-sm">Restore</button>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="truncate pr-4 font-bold text-slate-700">${item.name}</span>
+                                <span class="text-[8px] font-black bg-slate-300 text-slate-600 px-2 py-0.5 rounded uppercase">Trash</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="restoreItem(${item.id})" class="flex-1 bg-white text-blue-600 font-black uppercase text-[10px] py-2 rounded-xl shadow-sm border border-slate-200">Restore</button>
+                                <button onclick="permanentDelete(${item.id})" class="flex-1 bg-red-50 text-red-600 font-black uppercase text-[10px] py-2 rounded-xl border border-red-100">Delete Forever</button>
+                            </div>
                         `;
                     } else {
                         const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
@@ -240,7 +265,9 @@
                                 ` : `
                                     <button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>
                                 `}
-                                <button onclick="moveToTrash(${item.id})" class="text-slate-300">×</button>
+                                <button onclick="moveToTrash(${item.id})" class="text-slate-300 hover:text-red-400 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                </button>
                             </div>
                         `;
                     }
