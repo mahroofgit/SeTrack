@@ -11,9 +11,9 @@
         .item-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; line-height: 1.2; }
         .high-roi { color: #064e3b; font-weight: 900; }
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
-        #sale-overlay { transition: opacity 0.2s ease; }
+        .modal-bg { transition: opacity 0.2s ease; }
         .modal-content { transform: scale(0.9); transition: transform 0.2s ease; }
-        #sale-overlay:not(.hidden) .modal-content { transform: scale(1); }
+        .modal-show .modal-content { transform: scale(1); }
     </style>
 </head>
 <body class="bg-slate-50 pb-32">
@@ -82,14 +82,19 @@
         </div>
     </div>
 
-    <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
+    <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6 modal-bg">
         <div class="modal-content bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl">
-            <h3 class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
+            <h3 id="modal-title" class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
             <input id="modal-sell-input" type="number" inputmode="decimal" placeholder="0.00" 
                    class="w-full text-center text-3xl font-black p-4 bg-slate-100 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500 mb-4">
+            
+            <div id="edit-sold-options" class="hidden mb-4">
+                <button onclick="resetToUnsold()" class="w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl uppercase text-[10px] border border-slate-200">Reset to Unsold</button>
+            </div>
+
             <div class="flex gap-3">
                 <button onclick="closeSaleModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button>
-                <button onclick="confirmSale()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Confirm</button>
+                <button onclick="confirmSale()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Save</button>
             </div>
         </div>
     </div>
@@ -144,7 +149,10 @@
 
         function sellItem(id) {
             activeSaleId = id;
-            document.getElementById('sale-overlay').classList.remove('hidden');
+            const modal = document.getElementById('sale-overlay');
+            document.getElementById('modal-title').innerText = "Enter Sale Price";
+            document.getElementById('edit-sold-options').classList.add('hidden');
+            modal.classList.remove('hidden');
             const input = document.getElementById('modal-sell-input');
             input.value = '';
             setTimeout(() => input.focus(), 100);
@@ -156,15 +164,45 @@
             const val = parseFloat(document.getElementById('modal-sell-input').value);
             if (isNaN(val)) return;
             const item = data.find(i => i.id === activeSaleId);
-            if (item) { item.sell = val; item.profit = item.sell - item.totalPaid; item.sold = true; update(); }
+            if (item) { 
+                item.sell = val; 
+                item.profit = item.sell - item.totalPaid; 
+                item.sold = true; 
+                update(); 
+            }
+            closeSaleModal();
+        }
+
+        function resetToUnsold() {
+            const item = data.find(i => i.id === activeSaleId);
+            if (item) {
+                item.sold = false;
+                item.sell = 0;
+                item.profit = 0;
+                update();
+            }
             closeSaleModal();
         }
 
         function editItem(id) {
             const item = data.find(i => i.id === id);
             if (!item) return;
-            const newName = prompt("Edit name:", item.name);
-            if(newName) { item.name = newName; update(); }
+
+            if (item.sold) {
+                // Open Custom Modal for Sold Items
+                activeSaleId = id;
+                const modal = document.getElementById('sale-overlay');
+                document.getElementById('modal-title').innerText = "Update Sale Price";
+                document.getElementById('edit-sold-options').classList.remove('hidden');
+                modal.classList.remove('hidden');
+                const input = document.getElementById('modal-sell-input');
+                input.value = item.sell;
+                setTimeout(() => input.focus(), 100);
+            } else {
+                // Simple name edit for inventory
+                const newName = prompt("Edit name:", item.name);
+                if(newName) { item.name = newName; update(); }
+            }
         }
 
         function moveToTrash(id) { trash.push(data.find(i => i.id === id)); data = data.filter(i => i.id !== id); update(); }
