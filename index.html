@@ -61,7 +61,7 @@
             <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all uppercase">Add to Inventory</button>
         </div>
 
-        <div id="item-list" class="space-y-3"></div>
+        <div id="item-list" class="space-y-6"></div>
 
         <div id="trash-section" class="mt-12 pt-8 border-t border-slate-200">
             <button onclick="toggleTrash()" class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -109,24 +109,24 @@
             const premium = 1 + (parseFloat(document.getElementById('in-premium').value) / 100);
             const fee = parseFloat(document.getElementById('in-fee').value);
             const tax = 1 + (parseFloat(document.getElementById('in-tax').value) / 100);
+            const date = new Date().toLocaleDateString('en-CA');
 
             if(!name || isNaN(shelf)) return;
-
-            // Formula: ((Shelf * Premium) + Fee) * Tax
             const totalCost = ((shelf * premium) + fee) * tax;
 
-            data.push({ 
-                id: Date.now(), 
-                name, 
-                listedPrice: shelf, 
-                totalPaid: totalCost, 
-                sell: 0, 
-                profit: 0, 
-                sold: false 
-            });
-
+            data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: totalCost, sell: 0, profit: 0, sold: false });
             document.getElementById('in-name').value = '';
             document.getElementById('in-buy').value = '';
+            update();
+        }
+
+        function sellItem(id) {
+            const price = prompt("Sale Price?");
+            if (price === null || isNaN(parseFloat(price))) return;
+            const item = data.find(i => i.id === id);
+            item.sell = parseFloat(price);
+            item.profit = item.sell - item.totalPaid;
+            item.sold = true;
             update();
         }
 
@@ -146,16 +146,6 @@
                     update();
                 }
             }
-        }
-
-        function sellItem(id) {
-            const price = prompt("Sale Price?");
-            if (price === null || isNaN(parseFloat(price))) return;
-            const item = data.find(i => i.id === id);
-            item.sell = parseFloat(price);
-            item.profit = item.sell - item.totalPaid;
-            item.sold = true;
-            update();
         }
 
         function moveToTrash(id) {
@@ -189,47 +179,58 @@
                 totalInvestment += item.totalPaid;
             });
 
-            const filteredData = data.filter(item => {
-                return currentTab === 'inventory' ? !item.sold : item.sold;
-            }).sort((a,b) => b.id - a.id);
+            const filteredData = data.filter(item => currentTab === 'inventory' ? !item.sold : item.sold);
+            const groups = filteredData.reduce((acc, item) => {
+                const d = item.date || "Legacy";
+                if (!acc[d]) acc[d] = [];
+                acc[d].push(item);
+                return acc;
+            }, {});
 
-            filteredData.forEach(item => {
-                const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
-                let profitClass = "text-green-600";
-                if (item.profit < 0) profitClass = "text-red-600";
-                if (roi >= 100) profitClass = "high-roi";
+            const sortedDates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
 
-                const card = document.createElement('div');
-                card.className = `p-4 rounded-2xl flex justify-between items-center border ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
-                card.innerHTML = `
-                    <div class="flex-1 pr-4" onclick="editItem(${item.id})">
-                        <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
-                        <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
-                            Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}
-                            ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        ${item.sold ? `
-                            <div class="text-right">
-                                <p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
-                                <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
+            sortedDates.forEach(date => {
+                const dateHeader = document.createElement('div');
+                dateHeader.className = "flex justify-center my-4";
+                dateHeader.innerHTML = `<span class="bg-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">${date}</span>`;
+                list.appendChild(dateHeader);
+
+                const itemsInDate = groups[date].sort((a,b) => a.name.localeCompare(b.name));
+
+                itemsInDate.forEach(item => {
+                    const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
+                    let profitClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
+
+                    const card = document.createElement('div');
+                    card.className = `p-4 rounded-2xl flex justify-between items-center border mb-2 ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
+                    card.innerHTML = `
+                        <div class="flex-1 pr-4" onclick="editItem(${item.id})">
+                            <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
+                            <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
+                                Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}
+                                ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
                             </div>
-                        ` : `
-                            <button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>
-                        `}
-                        <button onclick="moveToTrash(${item.id})" class="text-slate-300">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                        </button>
-                    </div>
-                `;
-                list.appendChild(card);
+                        </div>
+                        <div class="flex items-center gap-3">
+                            ${item.sold ? `
+                                <div class="text-right">
+                                    <p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
+                                    <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
+                                </div>
+                            ` : `
+                                <button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>
+                            `}
+                            <button onclick="moveToTrash(${item.id})" class="text-slate-300">×</button>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
             });
 
             trash.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "flex justify-between items-center text-xs p-3 bg-slate-200 rounded-xl mb-2";
-                card.innerHTML = `<span class="truncate pr-4">${item.name}</span><button onclick="restoreItem(${item.id})" class="text-blue-600 font-bold uppercase text-[10px]">Restore</button>`;
+                card.innerHTML = `<span class="truncate pr-4">${item.name} (${item.date})</span><button onclick="restoreItem(${item.id})" class="text-blue-600 font-bold uppercase text-[10px]">Restore</button>`;
                 trashList.appendChild(card);
             });
 
@@ -238,24 +239,28 @@
             document.getElementById('trash-count').innerText = trash.length;
         }
 
-        // CSV Logic
-        function exportCSV() {
-            let csv = "Name,ShelfPrice,TotalInvestment,SalePrice,Profit,Sold\n";
-            data.forEach(i => csv += `"${i.name}",${(i.listedPrice||0).toFixed(2)},${i.totalPaid.toFixed(2)},${i.sell.toFixed(2)},${i.profit.toFixed(2)},${i.sold}\n`);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `tracker_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-        }
-
+        // CSV Logic with Manual Date Input
         function importCSV(input) {
+            const today = new Date().toLocaleDateString('en-CA');
+            const manualDate = prompt("Enter Date for this Import (YYYY-MM-DD):", today);
+            
+            // If user cancels, stop the import
+            if (manualDate === null) {
+                input.value = ''; // Reset input
+                return; 
+            }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const rows = e.target.result.split('\n').slice(1);
                 rows.forEach(row => {
                     const c = row.split(',');
-                    if(c.length < 4) return;
+                    if(c.length < 2) return;
+                    
+                    // Use the manually entered date for every item in this CSV
                     data.push({ 
                         id: Date.now() + Math.random(), 
+                        date: manualDate || today,
                         name: c[0].replace(/"/g,''), 
                         listedPrice: parseFloat(c[1]) || 0,
                         totalPaid: parseFloat(c[2]) || 0, 
@@ -267,6 +272,14 @@
                 update();
             };
             reader.readAsText(input.files[0]);
+        }
+
+        function exportCSV() {
+            let csv = "Name,ShelfPrice,TotalInvestment,SalePrice,Profit,Sold\n";
+            data.forEach(i => csv += `"${i.name}",${(i.listedPrice||0).toFixed(2)},${i.totalPaid.toFixed(2)},${i.sell.toFixed(2)},${i.profit.toFixed(2)},${i.sold}\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `SeTrack_Export.csv`; a.click();
         }
 
         render();
