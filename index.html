@@ -123,15 +123,33 @@
             update();
         }
 
+        // Updated sellItem function to trigger numeric keyboard
         function sellItem(id) {
-            const price = prompt("Sale Price?");
-            if (price === null || isNaN(parseFloat(price))) return;
-            const item = data.find(i => i.id === id);
-            item.sell = parseFloat(price);
-            item.profit = item.sell - item.totalPaid;
-            item.sold = true;
-            update();
+            // We create a temporary hidden input to force the numeric keypad
+            const tempInput = document.createElement('input');
+            tempInput.type = 'number';
+            tempInput.inputMode = 'decimal'; // This ensures the "." is visible on iOS
+            tempInput.style.position = 'fixed';
+            tempInput.style.opacity = '0';
+            document.body.appendChild(tempInput);
+    
+            // Focus the hidden input to bring up the keypad
+            tempInput.focus();
+
+            // Use a slight delay so the keyboard has time to pop up before the prompt
+            setTimeout(() => {
+                const price = prompt("Sale Price?");
+                document.body.removeChild(tempInput); // Clean up
+        
+                if (price === null || isNaN(parseFloat(price))) return;
+                const item = data.find(i => i.id === id);
+                item.sell = parseFloat(price);
+                item.profit = item.sell - item.totalPaid;
+                item.sold = true;
+                update();
+            }, 100);
         }
+
 
         function editItem(id) {
             const item = data.find(i => i.id === id);
