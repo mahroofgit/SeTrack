@@ -39,13 +39,7 @@
             </div>
         </div>
 
-        <div class="relative mb-6">
-            <input id="search-input" type="text" placeholder="Search inventory..." oninput="render()" 
-                   class="w-full p-4 pl-12 bg-white border border-slate-200 rounded-2xl outline-none shadow-sm text-sm">
-            <svg class="absolute left-4 top-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </div>
-
-        <div id="add-section" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-8">
+        <div id="add-section" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-6">
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none">
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
@@ -66,6 +60,12 @@
                 </div>
             </div>
             <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all uppercase">Add to Inventory</button>
+        </div>
+
+        <div class="relative mb-6">
+            <input id="search-input" type="text" placeholder="Search inventory..." oninput="render()" 
+                   class="w-full p-4 pl-12 bg-white border border-slate-200 rounded-2xl outline-none shadow-sm text-sm">
+            <svg class="absolute left-4 top-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
 
         <div id="item-list" class="space-y-6"></div>
@@ -189,7 +189,6 @@
             if (!item) return;
 
             if (item.sold) {
-                // Open Custom Modal for Sold Items
                 activeSaleId = id;
                 const modal = document.getElementById('sale-overlay');
                 document.getElementById('modal-title').innerText = "Update Sale Price";
@@ -199,7 +198,6 @@
                 input.value = item.sell;
                 setTimeout(() => input.focus(), 100);
             } else {
-                // Simple name edit for inventory
                 const newName = prompt("Edit name:", item.name);
                 if(newName) { item.name = newName; update(); }
             }
