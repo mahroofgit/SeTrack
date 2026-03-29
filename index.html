@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SeTrack - Profit Tracker</title>
+    <title>SeTrack Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; overflow-x: hidden; }
         .item-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; line-height: 1.2; }
-        .high-roi { color: #064e3b; font-weight: 900; }
+        .high-roi { color: #059669; font-weight: 900; }
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
         
         /* Swipe Container Logic */
-        .swipe-container { position: relative; overflow: hidden; border-radius: 1rem; margin-bottom: 0.5rem; }
+        .swipe-container { position: relative; overflow: hidden; border-radius: 1.5rem; margin-bottom: 0.75rem; transition: all 0.3s; }
         .swipe-actions { position: absolute; right: 0; top: 0; bottom: 0; display: flex; width: 140px; z-index: 1; }
-        .swipe-content { position: relative; z-index: 2; transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); background: white; width: 100%; }
+        .swipe-content { position: relative; z-index: 2; transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.2); background: white; width: 100%; }
         .swiped { transform: translateX(-140px); }
         
-        input[type="date"] { appearance: none; -webkit-appearance: none; min-height: 1.5rem; }
+        input[type="date"] { appearance: none; -webkit-appearance: none; }
     </style>
 </head>
 <body class="bg-slate-50 pb-32">
@@ -29,14 +29,14 @@
                 <label class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer">
                     Restore <input type="file" id="restore-file" accept=".json" class="hidden" onchange="restoreBackup(this)">
                 </label>
-                <label class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full cursor-pointer ml-1 shadow-md active:scale-90 transition-transform">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <label class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full cursor-pointer ml-1 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="openImportModal(this)">
                 </label>
             </div>
         </header>
         
-        <div class="bg-slate-900 text-white p-6 rounded-3xl shadow-xl mb-6 flex justify-between items-end">
+        <div class="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl mb-6 flex justify-between items-end">
             <div>
                 <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Net Profit</p>
                 <h2 id="total-profit" class="text-4xl font-black tracking-tighter">$0.00</h2>
@@ -47,53 +47,74 @@
             </div>
         </div>
 
-        <div id="add-section" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-6">
-            <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none">
+        <div id="add-section" class="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-200 mb-6">
+            <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none font-medium">
             <div class="mb-4">
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Purchase Date</label>
                 <input id="in-date" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700">
             </div>
             <div class="grid grid-cols-2 gap-3 mb-4">
-                <input id="in-buy" type="number" inputmode="decimal" placeholder="Shelf Price" class="w-full p-4 bg-slate-100 rounded-2xl outline-none">
-                <input id="in-premium" type="number" inputmode="decimal" value="16" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-center font-bold">
-                <input id="in-fee" type="number" inputmode="decimal" value="1.50" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-center font-bold">
-                <input id="in-tax" type="number" inputmode="decimal" value="13" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-center font-bold">
+                <div class="bg-slate-100 p-2 rounded-2xl">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Shelf Price</label>
+                    <input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" class="w-full p-1 bg-transparent outline-none font-bold">
+                </div>
+                <div class="bg-slate-100 p-2 rounded-2xl">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Premium %</label>
+                    <input id="in-premium" type="number" value="16" class="w-full p-1 bg-transparent outline-none font-bold">
+                </div>
+                <div class="bg-slate-100 p-2 rounded-2xl">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fee $</label>
+                    <input id="in-fee" type="number" value="1.50" class="w-full p-1 bg-transparent outline-none font-bold">
+                </div>
+                <div class="bg-slate-100 p-2 rounded-2xl">
+                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label>
+                    <input id="in-tax" type="number" value="13" class="w-full p-1 bg-transparent outline-none font-bold">
+                </div>
             </div>
-            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 uppercase">Add to Inventory</button>
+            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 transition-all uppercase tracking-wide">Add to Inventory</button>
         </div>
 
-        <div id="item-list" class="space-y-4"></div>
+        <div class="relative mb-6">
+            <input id="search-input" type="text" placeholder="Search..." oninput="render()" 
+                   class="w-full p-4 pl-12 bg-white border border-slate-200 rounded-2xl outline-none shadow-sm text-sm">
+            <svg class="absolute left-4 top-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+
+        <div id="item-list"></div>
 
         <div id="trash-section" class="mt-12 pt-8 border-t border-slate-200 hidden">
             <div class="flex justify-between items-center mb-4">
-                <button onclick="toggleTrash()" class="text-slate-400 text-xs font-bold uppercase flex items-center gap-2">View Trash (<span id="trash-count">0</span>)</button>
+                <button onclick="toggleTrash()" class="text-slate-400 text-[10px] font-bold uppercase flex items-center gap-2">
+                    View Trash (<span id="trash-count">0</span>)
+                </button>
                 <button onclick="emptyTrash()" class="text-red-500 text-[10px] font-black uppercase">Empty Trash</button>
             </div>
             <div id="trash-list" class="hidden space-y-2"></div>
         </div>
     </div>
 
-    <div id="import-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center">
-            <h3 class="font-black text-slate-800 uppercase mb-4">Import Date</h3>
-            <input id="import-date-input" type="date" class="w-full p-4 bg-slate-100 rounded-2xl mb-6">
-            <div class="flex gap-3"><button onclick="closeImportModal()" class="flex-1 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import</button></div>
-        </div>
-    </div>
-
     <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl">
-            <h3 class="text-center font-black text-slate-800 uppercase mb-4">Sale Price</h3>
-            <input id="modal-sell-input" type="number" inputmode="decimal" class="w-full text-center text-3xl font-black p-4 bg-slate-100 rounded-2xl mb-4">
+        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
+            <h3 class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
+            <input id="modal-sell-input" type="number" inputmode="decimal" class="w-full text-center text-3xl font-black p-4 bg-slate-100 rounded-2xl outline-none mb-4">
             <div id="edit-sold-options" class="hidden mb-4"><button onclick="resetToUnsold()" class="w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl uppercase text-[10px]">Reset to Unsold</button></div>
-            <div class="flex gap-3"><button onclick="closeSaleModal()" class="flex-1 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmSale()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Save</button></div>
+            <div class="flex gap-3"><button onclick="closeSaleModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmSale()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Save</button></div>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center py-3 pb-8 z-50">
-        <button onclick="switchTab('inventory')" id="tab-inventory" class="flex flex-col items-center gap-1 text-slate-400 tab-active"><span class="text-[9px] font-bold uppercase">Inventory</span></button>
-        <button onclick="switchTab('sold')" id="tab-sold" class="flex flex-col items-center gap-1 text-slate-400"><span class="text-[9px] font-bold uppercase">Sold</span></button>
-        <button onclick="switchTab('archive')" id="tab-archive" class="flex flex-col items-center gap-1 text-slate-400"><span class="text-[9px] font-bold uppercase">Archive</span></button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center py-3 px-6 pb-8 shadow-2xl z-50">
+        <button onclick="switchTab('inventory')" id="tab-inventory" class="flex flex-col items-center gap-1 text-slate-300 tab-active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+            <span class="text-[9px] font-bold uppercase">Inventory</span>
+        </button>
+        <button onclick="switchTab('sold')" id="tab-sold" class="flex flex-col items-center gap-1 text-slate-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span class="text-[9px] font-bold uppercase">Sold</span>
+        </button>
+        <button onclick="switchTab('archive')" id="tab-archive" class="flex flex-col items-center gap-1 text-slate-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+            <span class="text-[9px] font-bold uppercase">Archive</span>
+        </button>
     </nav>
 
     <script>
@@ -101,7 +122,6 @@
         let trash = JSON.parse(localStorage.getItem('tracker_trash')) || [];
         let currentTab = 'inventory';
         let activeSaleId = null;
-        let pendingImportFile = null;
         let startX = 0;
 
         document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
@@ -112,21 +132,21 @@
             render();
         }
 
-        // --- SWIPE ENGINE ---
+        // Swipe Engine
         function ts(e) { startX = e.touches[0].clientX; }
         function te(e, id) {
+            if (currentTab !== 'inventory') return;
             let diff = startX - e.changedTouches[0].clientX;
             const row = document.getElementById(`row-${id}`);
-            if (currentTab !== 'inventory') return; // Swipe only on inventory
-            if (diff > 50) row.classList.add('swiped');
-            else if (diff < -50) row.classList.remove('swiped');
+            if (diff > 60) row.classList.add('swiped');
+            else if (diff < -60) row.classList.remove('swiped');
         }
 
         function addItem() {
             const name = document.getElementById('in-name').value;
             const shelf = parseFloat(document.getElementById('in-buy').value);
-            const date = document.getElementById('in-date').value;
             if(!name || isNaN(shelf)) return;
+            const date = document.getElementById('in-date').value;
             const prem = 1 + (parseFloat(document.getElementById('in-premium').value)/100);
             const fee = parseFloat(document.getElementById('in-fee').value);
             const tax = 1 + (parseFloat(document.getElementById('in-tax').value)/100);
@@ -154,32 +174,57 @@
                 if (currentTab === 'inventory') return !i.sold && !i.archived;
                 if (currentTab === 'sold') return i.sold;
                 if (currentTab === 'archive') return i.archived;
-            });
+            }).filter(i => i.name.toLowerCase().includes(document.getElementById('search-input').value.toLowerCase()));
 
-            filtered.forEach(item => {
-                const container = document.createElement('div');
-                container.className = "swipe-container";
-                
-                // Only build actions for inventory tab
-                const actionsHtml = currentTab === 'inventory' ? `
-                    <div class="swipe-actions">
-                        <button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button>
-                        <button onclick="moveToTrash(${item.id})" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button>
-                    </div>` : '';
+            // Group by Date
+            const groups = filtered.reduce((acc, i) => { const d = i.date || "Legacy"; if(!acc[d]) acc[d] = []; acc[d].push(i); return acc; }, {});
 
-                container.innerHTML = `
-                    ${actionsHtml}
-                    <div id="row-${item.id}" class="swipe-content p-4 border rounded-2xl flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 opacity-70' : ''}" 
-                         ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
-                        <div class="flex-1 pr-4">
-                            <p class="font-bold text-slate-800 item-name">${item.name}</p>
-                            <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">$${item.totalPaid.toFixed(2)} cost | ${item.date}</p>
-                        </div>
-                        ${item.sold ? `<div class="text-right text-green-600 font-black text-sm">$${item.profit.toFixed(2)}</div>` : 
-                          item.archived ? `<button onclick="toggleArchive(${item.id})" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg font-black text-[9px] uppercase">Restore</button>` :
-                          `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase">Sell</button>`}
-                    </div>`;
-                list.appendChild(container);
+            Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(date => {
+                const header = document.createElement('div');
+                header.className = "flex justify-center my-4";
+                header.innerHTML = `<span class="bg-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">${date}</span>`;
+                list.appendChild(header);
+
+                groups[date].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+                    const container = document.createElement('div');
+                    container.className = "swipe-container";
+                    
+                    const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
+                    const pClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
+
+                    const actionHtml = currentTab === 'inventory' ? `
+                        <div class="swipe-actions">
+                            <button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button>
+                            <button onclick="moveToTrash(${item.id})" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button>
+                        </div>` : '';
+
+                    container.innerHTML = `
+                        ${actionHtml}
+                        <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" 
+                             ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
+                            <div class="flex-1 pr-4">
+                                <p class="font-bold text-slate-800 item-name">${item.name}</p>
+                                <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
+                                    Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}
+                                    ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                ${item.sold ? `
+                                    <button onclick="sellItem(${item.id})">
+                                        <p class="font-black text-sm leading-none ${pClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
+                                        <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
+                                    </button>` : 
+                                  item.archived ? `
+                                    <div class="flex gap-2">
+                                        <button onclick="toggleArchive(${item.id})" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button>
+                                        <button onclick="moveToTrash(${item.id})" class="text-red-400 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                                    </div>` :
+                                  `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md">Sell</button>`}
+                            </div>
+                        </div>`;
+                    list.appendChild(container);
+                });
             });
 
             trash.forEach(item => {
@@ -196,22 +241,34 @@
             document.getElementById('trash-count').innerText = trash.length;
         }
 
-        // Standard Utility Functions
+        // Feature Functions
         function toggleArchive(id) { const i = data.find(x => x.id === id); if(i) i.archived = !i.archived; update(); }
-        function moveToTrash(id) { trash.push(data.find(x => x.id === id)); data = data.filter(x => x.id !== id); update(); }
+        function moveToTrash(id) { const i = data.find(x => x.id === id); if(i) { trash.push(i); data = data.filter(x => x.id !== id); update(); } }
         function restoreItem(id) { data.push(trash.find(x => x.id === id)); trash = trash.filter(x => x.id !== id); update(); }
         function permanentDelete(id) { if(confirm("Delete forever?")) { trash = trash.filter(x => x.id !== id); update(); } }
         function toggleTrash() { document.getElementById('trash-list').classList.toggle('hidden'); }
         function emptyTrash() { if(confirm("Clear all?")) { trash = []; update(); } }
-        function sellItem(id) { activeSaleId = id; const i = data.find(x => x.id === id); document.getElementById('sale-overlay').classList.remove('hidden'); document.getElementById('modal-sell-input').value = i.sold ? i.sell : ''; document.getElementById('edit-sold-options').classList.toggle('hidden', !i.sold); }
-        function confirmSale() { const val = parseFloat(document.getElementById('modal-sell-input').value); const i = data.find(x => x.id === activeSaleId); if(i && !isNaN(val)) { i.sell = val; i.profit = val - i.totalPaid; i.sold = true; update(); } closeSaleModal(); }
+        
+        function sellItem(id) { 
+            activeSaleId = id; 
+            const i = data.find(x => x.id === id); 
+            document.getElementById('sale-overlay').classList.remove('hidden'); 
+            document.getElementById('modal-sell-input').value = i.sold ? i.sell : ''; 
+            document.getElementById('edit-sold-options').classList.toggle('hidden', !i.sold); 
+            setTimeout(() => document.getElementById('modal-sell-input').focus(), 100);
+        }
+        function confirmSale() { 
+            const val = parseFloat(document.getElementById('modal-sell-input').value); 
+            const i = data.find(x => x.id === activeSaleId); 
+            if(i && !isNaN(val)) { i.sell = val; i.profit = val - i.totalPaid; i.sold = true; update(); } 
+            closeSaleModal(); 
+        }
         function resetToUnsold() { const i = data.find(x => x.id === activeSaleId); if(i) { i.sold = false; i.sell = 0; i.profit = 0; update(); } closeSaleModal(); }
         function closeSaleModal() { document.getElementById('sale-overlay').classList.add('hidden'); }
-        function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
-        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); }
-        function confirmImport() { const date = document.getElementById('import-date-input').value; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); closeImportModal(); }; reader.readAsText(pendingImportFile); }
+        
         function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'SeTrack_Backup.json'; a.click(); }
         function restoreBackup(input) { const reader = new FileReader(); reader.onload = (e) => { const b = JSON.parse(e.target.result); if(b.data) { data = b.data; trash = b.trash || []; update(); } }; reader.readAsText(input.files[0]); }
+        function openImportModal(input) { if (input.files[0]) { const date = prompt("Enter Purchase Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]); if(!date) return; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); }; reader.readAsText(input.files[0]); } }
 
         render();
     </script>
