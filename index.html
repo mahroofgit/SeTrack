@@ -68,7 +68,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                 View Trash (<span id="trash-count">0</span>)
             </button>
-            <div id="trash-list" class="hidden space-y-2 opacity-60"></div>
+            <div id="trash-list" class="hidden space-y-4"></div>
         </div>
     </div>
 
@@ -132,6 +132,7 @@
 
         function editItem(id) {
             const item = data.find(i => i.id === id);
+            if (!item) return;
             if (item.sold) {
                 const newSale = prompt("Update Sale Price:", item.sell);
                 if(newSale !== null && !isNaN(parseFloat(newSale))) {
@@ -179,8 +180,21 @@
                 totalInvestment += item.totalPaid;
             });
 
+            // 1. Render Main List (Grouped by Date)
             const filteredData = data.filter(item => currentTab === 'inventory' ? !item.sold : item.sold);
-            const groups = filteredData.reduce((acc, item) => {
+            renderGroupedList(filteredData, list, false);
+
+            // 2. Render Trash List (Grouped by Date)
+            renderGroupedList(trash, trashList, true);
+
+            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
+            document.getElementById('total-paid-display').innerText = `$${totalInvestment.toFixed(2)}`;
+            document.getElementById('trash-count').innerText = trash.length;
+        }
+
+        // Shared helper for date-based grouping
+        function renderGroupedList(items, container, isTrash) {
+            const groups = items.reduce((acc, item) => {
                 const d = item.date || "Legacy";
                 if (!acc[d]) acc[d] = [];
                 acc[d].push(item);
@@ -193,71 +207,61 @@
                 const dateHeader = document.createElement('div');
                 dateHeader.className = "flex justify-center my-4";
                 dateHeader.innerHTML = `<span class="bg-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">${date}</span>`;
-                list.appendChild(dateHeader);
+                container.appendChild(dateHeader);
 
-                const itemsInDate = groups[date].sort((a,b) => a.name.localeCompare(b.name));
+                const sortedItems = groups[date].sort((a,b) => a.name.localeCompare(b.name));
 
-                itemsInDate.forEach(item => {
-                    const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
-                    let profitClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
-
+                sortedItems.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = `p-4 rounded-2xl flex justify-between items-center border mb-2 ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
-                    card.innerHTML = `
-                        <div class="flex-1 pr-4" onclick="editItem(${item.id})">
-                            <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
-                            <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
-                                Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}
-                                ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            ${item.sold ? `
-                                <div class="text-right">
-                                    <p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
-                                    <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
+                    if (isTrash) {
+                        card.className = "flex justify-between items-center text-xs p-4 bg-slate-200/50 border border-slate-300 rounded-2xl opacity-70";
+                        card.innerHTML = `
+                            <span class="truncate pr-4 font-semibold text-slate-600">${item.name}</span>
+                            <button onclick="restoreItem(${item.id})" class="text-blue-600 font-black uppercase text-[10px] bg-white px-3 py-1 rounded-lg shadow-sm">Restore</button>
+                        `;
+                    } else {
+                        const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
+                        let profitClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
+                        card.className = `p-4 rounded-2xl flex justify-between items-center border mb-2 ${item.sold ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
+                        card.innerHTML = `
+                            <div class="flex-1 pr-4" onclick="editItem(${item.id})">
+                                <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
+                                <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
+                                    Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}
+                                    ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
                                 </div>
-                            ` : `
-                                <button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>
-                            `}
-                            <button onclick="moveToTrash(${item.id})" class="text-slate-300">×</button>
-                        </div>
-                    `;
-                    list.appendChild(card);
+                            </div>
+                            <div class="flex items-center gap-3">
+                                ${item.sold ? `
+                                    <div class="text-right">
+                                        <p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
+                                        <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
+                                    </div>
+                                ` : `
+                                    <button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>
+                                `}
+                                <button onclick="moveToTrash(${item.id})" class="text-slate-300">×</button>
+                            </div>
+                        `;
+                    }
+                    container.appendChild(card);
                 });
             });
-
-            trash.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "flex justify-between items-center text-xs p-3 bg-slate-200 rounded-xl mb-2";
-                card.innerHTML = `<span class="truncate pr-4">${item.name} (${item.date})</span><button onclick="restoreItem(${item.id})" class="text-blue-600 font-bold uppercase text-[10px]">Restore</button>`;
-                trashList.appendChild(card);
-            });
-
-            document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
-            document.getElementById('total-paid-display').innerText = `$${totalInvestment.toFixed(2)}`;
-            document.getElementById('trash-count').innerText = trash.length;
         }
 
-        // CSV Logic with Manual Date Input
         function importCSV(input) {
             const today = new Date().toLocaleDateString('en-CA');
             const manualDate = prompt("Enter Date for this Import (YYYY-MM-DD):", today);
-            
-            // If user cancels, stop the import
             if (manualDate === null) {
-                input.value = ''; // Reset input
+                input.value = '';
                 return; 
             }
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const rows = e.target.result.split('\n').slice(1);
                 rows.forEach(row => {
                     const c = row.split(',');
                     if(c.length < 2) return;
-                    
-                    // Use the manually entered date for every item in this CSV
                     data.push({ 
                         id: Date.now() + Math.random(), 
                         date: manualDate || today,
