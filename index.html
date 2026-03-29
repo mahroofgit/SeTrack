@@ -10,8 +10,8 @@
         .item-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.95rem; line-height: 1.2; }
         .high-roi { color: #064e3b; font-weight: 900; }
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
-        .modal-bg { transition: opacity 0.2s ease; }
-        .modal-content { transform: scale(0.9); transition: transform 0.2s ease; }
+        .action-btn { padding: 8px; border-radius: 12px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+        .action-btn:active { background-color: #f1f5f9; }
     </style>
 </head>
 <body class="bg-slate-50 pb-32">
@@ -84,7 +84,7 @@
         </div>
     </div>
 
-    <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6 modal-bg">
+    <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
         <div class="modal-content bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl">
             <h3 id="modal-title" class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
             <input id="modal-sell-input" type="number" inputmode="decimal" placeholder="0.00" 
@@ -140,7 +140,7 @@
         }
 
         function exportBackup() {
-            const backup = { version: "2.2", timestamp: new Date().toISOString(), data, trash };
+            const backup = { version: "2.4", timestamp: new Date().toISOString(), data, trash };
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -151,16 +151,12 @@
 
         function restoreBackup(input) {
             if (!input.files || !input.files[0]) return;
-            if (!confirm("Restore backup? Current data will be replaced.")) { input.value = ''; return; }
+            if (!confirm("Restore backup?")) { input.value = ''; return; }
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const backup = JSON.parse(e.target.result);
-                    if (backup.data && backup.trash) {
-                        data = backup.data;
-                        trash = backup.trash;
-                        update();
-                    }
+                    if (backup.data) { data = backup.data; trash = backup.trash || []; update(); }
                 } catch (err) { alert("Error reading backup."); }
                 input.value = '';
             };
@@ -204,20 +200,16 @@
             if(!name || isNaN(shelf)) return;
             const totalCost = ((shelf * premium) + fee) * tax;
             data.push({ id: Date.now(), name, date: new Date().toLocaleDateString('en-CA'), listedPrice: shelf, totalPaid: totalCost, sell: 0, profit: 0, sold: false, archived: false });
-            document.getElementById('in-name').value = '';
-            document.getElementById('in-buy').value = '';
-            update();
+            document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update();
         }
 
         function sellItem(id) {
             activeSaleId = id;
-            const modal = document.getElementById('sale-overlay');
             document.getElementById('modal-title').innerText = "Enter Sale Price";
             document.getElementById('edit-sold-options').classList.add('hidden');
-            modal.classList.remove('hidden');
+            document.getElementById('sale-overlay').classList.remove('hidden');
             const input = document.getElementById('modal-sell-input');
-            input.value = '';
-            setTimeout(() => input.focus(), 100);
+            input.value = ''; setTimeout(() => input.focus(), 100);
         }
 
         function closeSaleModal() { document.getElementById('sale-overlay').classList.add('hidden'); activeSaleId = null; }
@@ -226,12 +218,7 @@
             const val = parseFloat(document.getElementById('modal-sell-input').value);
             if (isNaN(val)) return;
             const item = data.find(i => i.id === activeSaleId);
-            if (item) { 
-                item.sell = val; 
-                item.profit = item.sell - item.totalPaid; 
-                item.sold = true; 
-                update(); 
-            }
+            if (item) { item.sell = val; item.profit = item.sell - item.totalPaid; item.sold = true; update(); }
             closeSaleModal();
         }
 
@@ -246,10 +233,9 @@
             if (!item) return;
             if (item.sold) {
                 activeSaleId = id;
-                const modal = document.getElementById('sale-overlay');
                 document.getElementById('modal-title').innerText = "Update Sale Price";
                 document.getElementById('edit-sold-options').classList.remove('hidden');
-                modal.classList.remove('hidden');
+                document.getElementById('sale-overlay').classList.remove('hidden');
                 document.getElementById('modal-sell-input').value = item.sell;
             } else {
                 const newName = prompt("Edit name:", item.name);
@@ -294,10 +280,10 @@
                         let profitClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
                         card.className = `p-4 rounded-2xl flex justify-between items-center border mb-2 ${item.sold || item.archived ? 'bg-slate-100 border-slate-200' : 'bg-white border-slate-200 shadow-sm'}`;
                         
-                        let actions = item.sold ? 
+                        let mainAction = item.sold ? 
                             `<div class="text-right"><p class="font-black text-sm leading-none ${profitClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p></div>` : 
                             (item.archived ? 
-                                `<button onclick="toggleArchive(${item.id})" class="text-blue-600 font-black uppercase text-[9px] px-3 py-2 bg-white rounded-xl border border-slate-200">Restore</button>` :
+                                `<button onclick="toggleArchive(${item.id})" class="text-blue-600 font-black uppercase text-[9px] px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-sm">Restore</button>` :
                                 `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase">Sell</button>`);
 
                         card.innerHTML = `
@@ -310,9 +296,17 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                ${actions}
-                                ${!item.sold && !item.archived ? `<button onclick="toggleArchive(${item.id})" class="text-slate-300"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect></svg></button>` : ''}
-                                <button onclick="moveToTrash(${item.id})" class="text-slate-300"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                                ${mainAction}
+                                ${!item.sold ? `
+                                <div class="flex items-center ml-2 border-l border-slate-200 pl-2">
+                                    <button onclick="toggleArchive(${item.id})" class="action-btn text-blue-500/50 hover:text-blue-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                                    </button>
+                                    ${item.archived ? `
+                                    <button onclick="moveToTrash(${item.id})" class="action-btn text-red-500/40 hover:text-red-600 ml-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                    </button>` : ''}
+                                </div>` : ''}
                             </div>`;
                     }
                     container.appendChild(card);
@@ -325,21 +319,14 @@
             const trashList = document.getElementById('trash-list');
             let netProfit = 0, totalCost = 0;
             list.innerHTML = ''; trashList.innerHTML = '';
-            
-            data.forEach(item => { 
-                if(item.sold) netProfit += item.profit; 
-                totalCost += item.totalPaid; // Includes Inventory, Sold, and Archived
-            });
-
+            data.forEach(item => { if(item.sold) netProfit += item.profit; totalCost += item.totalPaid; });
             const filteredData = data.filter(item => {
                 if (currentTab === 'inventory') return !item.sold && !item.archived;
                 if (currentTab === 'sold') return item.sold;
                 if (currentTab === 'archive') return item.archived;
             });
-
             renderGroupedList(filteredData, list, false);
             renderGroupedList(trash, trashList, true);
-            
             document.getElementById('total-profit').innerText = `$${netProfit.toFixed(2)}`;
             document.getElementById('total-paid-display').innerText = `$${totalCost.toFixed(2)}`;
             document.getElementById('trash-count').innerText = trash.length;
