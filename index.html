@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SeTrack - Profit Tracker</title>
-    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, sans-serif; }
@@ -20,10 +19,14 @@
     <div class="max-w-md mx-auto p-4">
         <header class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">SeTrack</h1>
-            <div class="flex gap-2">
-                <button onclick="exportCSV()" class="bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold uppercase">Export</button>
-                <label class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold uppercase cursor-pointer">
-                    Import <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="importCSV(this)">
+            <div class="flex gap-2 items-center">
+                <button onclick="exportBackup()" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase">Backup</button>
+                <label class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer">
+                    Restore <input type="file" id="restore-file" accept=".json" class="hidden" onchange="restoreBackup(this)">
+                </label>
+                <label class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full cursor-pointer ml-1 shadow-md active:scale-90 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="batchAddItems(this)">
                 </label>
             </div>
         </header>
@@ -132,6 +135,78 @@
             render();
         }
 
+        // --- NEW: BACKUP & RESTORE LOGIC ---
+        function exportBackup() {
+            const backup = {
+                version: "2.0",
+                timestamp: new Date().toISOString(),
+                data: data,
+                trash: trash
+            };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SeTrack_Backup_${new Date().toLocaleDateString('en-CA')}.json`;
+            a.click();
+        }
+
+        function restoreBackup(input) {
+            if (!input.files || !input.files[0]) return;
+            if (!confirm("This will overwrite ALL current data with the backup file. Continue?")) {
+                input.value = ''; return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    if (backup.data && backup.trash) {
+                        data = backup.data;
+                        trash = backup.trash;
+                        update();
+                        alert("System Restore Successful!");
+                    } else {
+                        alert("Invalid backup file format.");
+                    }
+                } catch (err) {
+                    alert("Error reading backup file.");
+                }
+                input.value = '';
+            };
+            reader.readAsText(input.files[0]);
+        }
+
+        // --- NEW: BATCH ADD (+) LOGIC ---
+        function batchAddItems(input) {
+            if (!input.files || !input.files[0]) return;
+            const today = new Date().toLocaleDateString('en-CA');
+            const manualDate = prompt("Date for this new invoice? (YYYY-MM-DD):", today);
+            if (manualDate === null) { input.value = ''; return; }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const rows = e.target.result.split('\n').slice(1);
+                rows.forEach(row => {
+                    const c = row.split(','); 
+                    if(c.length < 2) return;
+                    data.push({ 
+                        id: Date.now() + Math.random(), 
+                        date: manualDate || today, 
+                        name: c[0].replace(/"/g,''), 
+                        listedPrice: parseFloat(c[1]) || 0, 
+                        totalPaid: parseFloat(c[2]) || 0, 
+                        sell: parseFloat(c[3]) || 0, 
+                        profit: parseFloat(c[4]) || 0, 
+                        sold: c[5]?.trim().toLowerCase() === 'true' 
+                    });
+                });
+                input.value = ''; 
+                update();
+                alert("New invoice added successfully!");
+            };
+            reader.readAsText(input.files[0]);
+        }
+
         function addItem() {
             const name = document.getElementById('in-name').value;
             const shelf = parseFloat(document.getElementById('in-buy').value);
@@ -187,7 +262,6 @@
         function editItem(id) {
             const item = data.find(i => i.id === id);
             if (!item) return;
-
             if (item.sold) {
                 activeSaleId = id;
                 const modal = document.getElementById('sale-overlay');
@@ -257,31 +331,6 @@
             document.getElementById('total-profit').innerText = `$${totalProfit.toFixed(2)}`;
             document.getElementById('total-paid-display').innerText = `$${totalInvestment.toFixed(2)}`;
             document.getElementById('trash-count').innerText = trash.length;
-        }
-
-        function importCSV(input) {
-            if (!input.files || !input.files[0]) return;
-            const today = new Date().toLocaleDateString('en-CA');
-            const manualDate = prompt("Date for this batch? (YYYY-MM-DD):", today);
-            if (manualDate === null) { input.value = ''; return; }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const rows = e.target.result.split('\n').slice(1);
-                rows.forEach(row => {
-                    const c = row.split(','); if(c.length < 2) return;
-                    data.push({ id: Date.now() + Math.random(), date: manualDate || today, name: c[0].replace(/"/g,''), listedPrice: parseFloat(c[1]) || 0, totalPaid: parseFloat(c[2]) || 0, sell: parseFloat(c[3]) || 0, profit: parseFloat(c[4]) || 0, sold: c[5]?.trim().toLowerCase() === 'true' });
-                });
-                input.value = ''; update();
-            };
-            reader.readAsText(input.files[0]);
-        }
-
-        function exportCSV() {
-            let csv = "Name,ShelfPrice,TotalInvestment,SalePrice,Profit,Sold\n";
-            data.forEach(i => csv += `"${i.name}",${(i.listedPrice||0).toFixed(2)},${i.totalPaid.toFixed(2)},${i.sell.toFixed(2)},${i.profit.toFixed(2)},${i.sold}\n`);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `SeTrack_Export.csv`; a.click();
         }
 
         window.onclick = function(event) { if (event.target == document.getElementById('sale-overlay')) closeSaleModal(); }
