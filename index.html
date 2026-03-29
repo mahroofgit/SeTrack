@@ -12,12 +12,12 @@
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
         
         /* Swipe Container Logic */
-        .swipe-container { position: relative; overflow: hidden; border-radius: 1.5rem; margin-bottom: 0.75rem; transition: all 0.3s; }
+        .swipe-container { position: relative; overflow: hidden; border-radius: 1.5rem; margin-bottom: 0.75rem; }
         .swipe-actions { position: absolute; right: 0; top: 0; bottom: 0; display: flex; width: 140px; z-index: 1; }
         .swipe-content { position: relative; z-index: 2; transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.2); background: white; width: 100%; }
         .swiped { transform: translateX(-140px); }
         
-        input[type="date"] { appearance: none; -webkit-appearance: none; }
+        input[type="date"] { appearance: none; -webkit-appearance: none; min-height: 2.5rem; }
     </style>
 </head>
 <body class="bg-slate-50 pb-32">
@@ -27,7 +27,7 @@
             <div class="flex gap-2 items-center">
                 <button onclick="exportBackup()" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase">Backup</button>
                 <label class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer">
-                    Restore <input type="file" id="restore-file" accept=".json" class="hidden" onchange="restoreBackup(this)">
+                    Restore <input type="file" id="restore-file" accept=".json" class="hidden" onchange="handleRestore(this)">
                 </label>
                 <label class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full cursor-pointer ml-1 shadow-md">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -54,29 +54,16 @@
                 <input id="in-date" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700">
             </div>
             <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-slate-100 p-2 rounded-2xl">
-                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Shelf Price</label>
-                    <input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" class="w-full p-1 bg-transparent outline-none font-bold">
-                </div>
-                <div class="bg-slate-100 p-2 rounded-2xl">
-                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Premium %</label>
-                    <input id="in-premium" type="number" value="16" class="w-full p-1 bg-transparent outline-none font-bold">
-                </div>
-                <div class="bg-slate-100 p-2 rounded-2xl">
-                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fee $</label>
-                    <input id="in-fee" type="number" value="1.50" class="w-full p-1 bg-transparent outline-none font-bold">
-                </div>
-                <div class="bg-slate-100 p-2 rounded-2xl">
-                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label>
-                    <input id="in-tax" type="number" value="13" class="w-full p-1 bg-transparent outline-none font-bold">
-                </div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Shelf $</label><input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Prem %</label><input id="in-premium" type="number" value="16" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fee $</label><input id="in-fee" type="number" value="1.50" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" class="w-full p-1 bg-transparent outline-none font-bold"></div>
             </div>
-            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 transition-all uppercase tracking-wide">Add to Inventory</button>
+            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 uppercase">Add to Inventory</button>
         </div>
 
         <div class="relative mb-6">
-            <input id="search-input" type="text" placeholder="Search..." oninput="render()" 
-                   class="w-full p-4 pl-12 bg-white border border-slate-200 rounded-2xl outline-none shadow-sm text-sm">
+            <input id="search-input" type="text" placeholder="Search inventory..." oninput="render()" class="w-full p-4 pl-12 bg-white border border-slate-200 rounded-2xl outline-none shadow-sm text-sm">
             <svg class="absolute left-4 top-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
 
@@ -84,18 +71,24 @@
 
         <div id="trash-section" class="mt-12 pt-8 border-t border-slate-200 hidden">
             <div class="flex justify-between items-center mb-4">
-                <button onclick="toggleTrash()" class="text-slate-400 text-[10px] font-bold uppercase flex items-center gap-2">
-                    View Trash (<span id="trash-count">0</span>)
-                </button>
+                <button onclick="toggleTrash()" class="text-slate-400 text-[10px] font-bold uppercase flex items-center gap-2">View Trash (<span id="trash-count">0</span>)</button>
                 <button onclick="emptyTrash()" class="text-red-500 text-[10px] font-black uppercase">Empty Trash</button>
             </div>
-            <div id="trash-list" class="hidden space-y-2"></div>
+            <div id="trash-list" class="hidden space-y-4"></div>
+        </div>
+    </div>
+
+    <div id="import-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
+            <h3 class="text-center font-black text-slate-800 uppercase mb-4">Import Date</h3>
+            <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold mb-6">
+            <div class="flex gap-3"><button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import</button></div>
         </div>
     </div>
 
     <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
-            <h3 class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
+            <h3 class="text-center font-black text-slate-800 uppercase mb-4">Sale Price</h3>
             <input id="modal-sell-input" type="number" inputmode="decimal" class="w-full text-center text-3xl font-black p-4 bg-slate-100 rounded-2xl outline-none mb-4">
             <div id="edit-sold-options" class="hidden mb-4"><button onclick="resetToUnsold()" class="w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl uppercase text-[10px]">Reset to Unsold</button></div>
             <div class="flex gap-3"><button onclick="closeSaleModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmSale()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Save</button></div>
@@ -105,15 +98,15 @@
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center py-3 px-6 pb-8 shadow-2xl z-50">
         <button onclick="switchTab('inventory')" id="tab-inventory" class="flex flex-col items-center gap-1 text-slate-300 tab-active">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
-            <span class="text-[9px] font-bold uppercase">Inventory</span>
+            <span class="text-[9px] font-bold uppercase tracking-widest">Inventory</span>
         </button>
         <button onclick="switchTab('sold')" id="tab-sold" class="flex flex-col items-center gap-1 text-slate-300">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-            <span class="text-[9px] font-bold uppercase">Sold</span>
+            <span class="text-[9px] font-bold uppercase tracking-widest">Sold</span>
         </button>
         <button onclick="switchTab('archive')" id="tab-archive" class="flex flex-col items-center gap-1 text-slate-300">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
-            <span class="text-[9px] font-bold uppercase">Archive</span>
+            <span class="text-[9px] font-bold uppercase tracking-widest">Archive</span>
         </button>
     </nav>
 
@@ -123,6 +116,7 @@
         let currentTab = 'inventory';
         let activeSaleId = null;
         let startX = 0;
+        let pendingImportFile = null;
 
         document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
 
@@ -132,7 +126,6 @@
             render();
         }
 
-        // Swipe Engine
         function ts(e) { startX = e.touches[0].clientX; }
         function te(e, id) {
             if (currentTab !== 'inventory') return;
@@ -152,6 +145,13 @@
             const tax = 1 + (parseFloat(document.getElementById('in-tax').value)/100);
             data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: ((shelf * prem) + fee) * tax, sell: 0, profit: 0, sold: false, archived: false });
             document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update();
+        }
+
+        function editName(id) {
+            const i = data.find(x => x.id === id);
+            if (!i) return;
+            const newName = prompt("Edit Item Name:", i.name);
+            if (newName && newName.trim() !== "") { i.name = newName; update(); }
         }
 
         function switchTab(tab) {
@@ -176,7 +176,6 @@
                 if (currentTab === 'archive') return i.archived;
             }).filter(i => i.name.toLowerCase().includes(document.getElementById('search-input').value.toLowerCase()));
 
-            // Group by Date
             const groups = filtered.reduce((acc, i) => { const d = i.date || "Legacy"; if(!acc[d]) acc[d] = []; acc[d].push(i); return acc; }, {});
 
             Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(date => {
@@ -188,39 +187,25 @@
                 groups[date].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
                     const container = document.createElement('div');
                     container.className = "swipe-container";
-                    
                     const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
                     const pClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
 
-                    const actionHtml = currentTab === 'inventory' ? `
-                        <div class="swipe-actions">
-                            <button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button>
-                            <button onclick="moveToTrash(${item.id})" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button>
-                        </div>` : '';
+                    const actionHtml = currentTab === 'inventory' ? `<div class="swipe-actions"><button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button><button onclick="moveToTrash(${item.id}, 'data')" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button></div>` : '';
 
                     container.innerHTML = `
                         ${actionHtml}
-                        <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" 
-                             ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
+                        <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
                             <div class="flex-1 pr-4">
-                                <p class="font-bold text-slate-800 item-name">${item.name}</p>
+                                <p onclick="editName(${item.id})" class="font-bold text-slate-800 item-name cursor-pointer">${item.name}</p>
                                 <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
                                     Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}
                                     ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
                                 </p>
                             </div>
                             <div class="text-right">
-                                ${item.sold ? `
-                                    <button onclick="sellItem(${item.id})">
-                                        <p class="font-black text-sm leading-none ${pClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p>
-                                        <p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p>
-                                    </button>` : 
-                                  item.archived ? `
-                                    <div class="flex gap-2">
-                                        <button onclick="toggleArchive(${item.id})" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button>
-                                        <button onclick="moveToTrash(${item.id})" class="text-red-400 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
-                                    </div>` :
-                                  `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md">Sell</button>`}
+                                ${item.sold ? `<button onclick="sellItem(${item.id})"><p class="font-black text-sm leading-none ${pClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p></button>` : 
+                                  item.archived ? `<div class="flex gap-2"><button onclick="toggleArchive(${item.id})" class="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button><button onclick="moveToTrash(${item.id}, 'data')" class="text-red-400 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div>` :
+                                  `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95">Sell</button>`}
                             </div>
                         </div>`;
                     list.appendChild(container);
@@ -229,10 +214,16 @@
 
             trash.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "p-4 bg-slate-200/50 rounded-2xl flex justify-between items-center";
-                card.innerHTML = `<span class="font-bold text-xs text-slate-600">${item.name}</span>
-                                  <div class="flex gap-2"><button onclick="restoreItem(${item.id})" class="text-blue-600 font-bold text-[9px] uppercase">Restore</button>
-                                  <button onclick="permanentDelete(${item.id})" class="text-red-600 font-bold text-[9px] uppercase">Burn</button></div>`;
+                card.className = "p-4 border border-slate-200 rounded-[1.5rem] flex justify-between items-center opacity-60 bg-slate-100";
+                card.innerHTML = `
+                    <div class="flex-1">
+                        <p class="font-bold text-slate-600 text-xs">${item.name}</p>
+                        <p class="text-[8px] font-bold text-slate-400 uppercase">Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="restoreFromTrash(${item.id})" class="text-blue-600 font-bold text-[9px] uppercase px-2">Restore</button>
+                        <button onclick="permanentDelete(${item.id})" class="text-red-600 font-bold text-[9px] uppercase px-2">Burn</button>
+                    </div>`;
                 trashList.appendChild(card);
             });
 
@@ -241,34 +232,24 @@
             document.getElementById('trash-count').innerText = trash.length;
         }
 
-        // Feature Functions
         function toggleArchive(id) { const i = data.find(x => x.id === id); if(i) i.archived = !i.archived; update(); }
         function moveToTrash(id) { const i = data.find(x => x.id === id); if(i) { trash.push(i); data = data.filter(x => x.id !== id); update(); } }
-        function restoreItem(id) { data.push(trash.find(x => x.id === id)); trash = trash.filter(x => x.id !== id); update(); }
+        function restoreFromTrash(id) { data.push(trash.find(x => x.id === id)); trash = trash.filter(x => x.id !== id); update(); }
         function permanentDelete(id) { if(confirm("Delete forever?")) { trash = trash.filter(x => x.id !== id); update(); } }
         function toggleTrash() { document.getElementById('trash-list').classList.toggle('hidden'); }
-        function emptyTrash() { if(confirm("Clear all?")) { trash = []; update(); } }
+        function emptyTrash() { if(confirm("Clear all items in trash?")) { trash = []; update(); } }
         
-        function sellItem(id) { 
-            activeSaleId = id; 
-            const i = data.find(x => x.id === id); 
-            document.getElementById('sale-overlay').classList.remove('hidden'); 
-            document.getElementById('modal-sell-input').value = i.sold ? i.sell : ''; 
-            document.getElementById('edit-sold-options').classList.toggle('hidden', !i.sold); 
-            setTimeout(() => document.getElementById('modal-sell-input').focus(), 100);
-        }
-        function confirmSale() { 
-            const val = parseFloat(document.getElementById('modal-sell-input').value); 
-            const i = data.find(x => x.id === activeSaleId); 
-            if(i && !isNaN(val)) { i.sell = val; i.profit = val - i.totalPaid; i.sold = true; update(); } 
-            closeSaleModal(); 
-        }
+        function sellItem(id) { activeSaleId = id; const i = data.find(x => x.id === id); document.getElementById('sale-overlay').classList.remove('hidden'); document.getElementById('modal-sell-input').value = i.sold ? i.sell : ''; document.getElementById('edit-sold-options').classList.toggle('hidden', !i.sold); setTimeout(() => document.getElementById('modal-sell-input').focus(), 100); }
+        function confirmSale() { const val = parseFloat(document.getElementById('modal-sell-input').value); const i = data.find(x => x.id === activeSaleId); if(i && !isNaN(val)) { i.sell = val; i.profit = val - i.totalPaid; i.sold = true; update(); } closeSaleModal(); }
         function resetToUnsold() { const i = data.find(x => x.id === activeSaleId); if(i) { i.sold = false; i.sell = 0; i.profit = 0; update(); } closeSaleModal(); }
         function closeSaleModal() { document.getElementById('sale-overlay').classList.add('hidden'); }
         
-        function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'SeTrack_Backup.json'; a.click(); }
-        function restoreBackup(input) { const reader = new FileReader(); reader.onload = (e) => { const b = JSON.parse(e.target.result); if(b.data) { data = b.data; trash = b.trash || []; update(); } }; reader.readAsText(input.files[0]); }
-        function openImportModal(input) { if (input.files[0]) { const date = prompt("Enter Purchase Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]); if(!date) return; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); }; reader.readAsText(input.files[0]); } }
+        function handleRestore(input) { if (confirm("Warning: Restoring will overwrite all current data. Proceed?")) { const reader = new FileReader(); reader.onload = (e) => { try { const b = JSON.parse(e.target.result); data = b.data || []; trash = b.trash || []; update(); alert("Database Restored Successfully"); } catch(e) { alert("Invalid Backup File"); } }; reader.readAsText(input.files[0]); } input.value = ''; }
+        function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SeTrack_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
+        
+        function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-date-picker').value = new Date().toISOString().split('T')[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
+        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); }
+        function confirmImport() { const date = document.getElementById('import-date-picker').value; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); closeImportModal(); }; reader.readAsText(pendingImportFile); }
 
         render();
     </script>
