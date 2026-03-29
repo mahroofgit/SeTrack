@@ -11,7 +11,6 @@
         .high-roi { color: #059669; font-weight: 900; }
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
         
-        /* Swipe Container Logic */
         .swipe-container { position: relative; overflow: hidden; border-radius: 1.5rem; margin-bottom: 0.75rem; }
         .swipe-actions { position: absolute; right: 0; top: 0; bottom: 0; display: flex; width: 140px; z-index: 1; }
         .swipe-content { position: relative; z-index: 2; transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.2); background: white; width: 100%; }
@@ -29,10 +28,9 @@
                 <label class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer">
                     Restore <input type="file" id="restore-file" accept=".json" class="hidden" onchange="handleRestore(this)">
                 </label>
-                <label class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full cursor-pointer ml-1 shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="openImportModal(this)">
-                </label>
+                <button onclick="toggleAddModal()" class="bg-blue-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg active:scale-90 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
             </div>
         </header>
         
@@ -45,21 +43,6 @@
                 <p class="text-[10px] opacity-50 font-bold uppercase tracking-widest mb-1">Total Cost</p>
                 <p id="total-paid-display" class="text-xl font-bold opacity-90">$0.00</p>
             </div>
-        </div>
-
-        <div id="add-section" class="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-200 mb-6">
-            <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none font-medium">
-            <div class="mb-4">
-                <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Purchase Date</label>
-                <input id="in-date" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700">
-            </div>
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Shelf $</label><input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" class="w-full p-1 bg-transparent outline-none font-bold"></div>
-                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Prem %</label><input id="in-premium" type="number" value="16" class="w-full p-1 bg-transparent outline-none font-bold"></div>
-                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fee $</label><input id="in-fee" type="number" value="1.50" class="w-full p-1 bg-transparent outline-none font-bold"></div>
-                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" class="w-full p-1 bg-transparent outline-none font-bold"></div>
-            </div>
-            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl active:scale-95 uppercase">Add to Inventory</button>
         </div>
 
         <div class="relative mb-6">
@@ -78,9 +61,38 @@
         </div>
     </div>
 
-    <div id="import-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] hidden flex items-center justify-center p-6">
+    <div id="add-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl relative">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-black text-slate-800 uppercase tracking-tight">New Item</h3>
+                <label class="bg-slate-100 p-2 rounded-xl cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="openImportModal(this)">
+                </label>
+            </div>
+            
+            <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none font-medium">
+            <div class="mb-4">
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Purchase Date</label>
+                <input id="in-date" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700">
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Shelf $</label><input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Prem %</label><input id="in-premium" type="number" value="16" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fee $</label><input id="in-fee" type="number" value="1.50" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="toggleAddModal()" class="flex-1 py-4 font-bold text-slate-400 uppercase text-xs">Cancel</button>
+                <button onclick="addItem()" class="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl uppercase shadow-lg shadow-blue-200">Add Item</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="import-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
-            <h3 class="text-center font-black text-slate-800 uppercase mb-4">Import Date</h3>
+            <h3 class="text-center font-black text-slate-800 uppercase mb-4">CSV Import Date</h3>
             <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold mb-6">
             <div class="flex gap-3"><button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import</button></div>
         </div>
@@ -126,14 +138,7 @@
             render();
         }
 
-        function ts(e) { startX = e.touches[0].clientX; }
-        function te(e, id) {
-            if (currentTab !== 'inventory') return;
-            let diff = startX - e.changedTouches[0].clientX;
-            const row = document.getElementById(`row-${id}`);
-            if (diff > 60) row.classList.add('swiped');
-            else if (diff < -60) row.classList.remove('swiped');
-        }
+        function toggleAddModal() { document.getElementById('add-modal').classList.toggle('hidden'); }
 
         function addItem() {
             const name = document.getElementById('in-name').value;
@@ -144,20 +149,27 @@
             const fee = parseFloat(document.getElementById('in-fee').value);
             const tax = 1 + (parseFloat(document.getElementById('in-tax').value)/100);
             data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: ((shelf * prem) + fee) * tax, sell: 0, profit: 0, sold: false, archived: false });
-            document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update();
+            document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; 
+            toggleAddModal(); update();
         }
 
         function editName(id) {
             const i = data.find(x => x.id === id);
-            if (!i) return;
-            const newName = prompt("Edit Item Name:", i.name);
-            if (newName && newName.trim() !== "") { i.name = newName; update(); }
+            if (i) { const n = prompt("Edit Item Name:", i.name); if(n) { i.name = n; update(); } }
+        }
+
+        function ts(e) { startX = e.touches[0].clientX; }
+        function te(e, id) {
+            if (currentTab !== 'inventory') return;
+            let diff = startX - e.changedTouches[0].clientX;
+            const row = document.getElementById(`row-${id}`);
+            if (diff > 60) row.classList.add('swiped');
+            else if (diff < -60) row.classList.remove('swiped');
         }
 
         function switchTab(tab) {
             currentTab = tab;
             ['inventory', 'sold', 'archive'].forEach(t => document.getElementById(`tab-${t}`).classList.toggle('tab-active', tab === t));
-            document.getElementById('add-section').classList.toggle('hidden', tab !== 'inventory');
             document.getElementById('trash-section').classList.toggle('hidden', tab !== 'archive');
             render();
         }
@@ -190,22 +202,19 @@
                     const roi = item.sold ? ((item.profit / item.totalPaid) * 100).toFixed(0) : 0;
                     const pClass = item.profit < 0 ? "text-red-600" : (roi >= 100 ? "high-roi" : "text-green-600");
 
-                    const actionHtml = currentTab === 'inventory' ? `<div class="swipe-actions"><button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button><button onclick="moveToTrash(${item.id}, 'data')" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button></div>` : '';
+                    const actionHtml = currentTab === 'inventory' ? `<div class="swipe-actions"><button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button><button onclick="moveToTrash(${item.id})" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button></div>` : '';
 
                     container.innerHTML = `
                         ${actionHtml}
                         <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
                             <div class="flex-1 pr-4">
                                 <p onclick="editName(${item.id})" class="font-bold text-slate-800 item-name cursor-pointer">${item.name}</p>
-                                <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
-                                    Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}
-                                    ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
-                                </p>
+                                <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}</p>
                             </div>
                             <div class="text-right">
                                 ${item.sold ? `<button onclick="sellItem(${item.id})"><p class="font-black text-sm leading-none ${pClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roi}% ROI</p></button>` : 
-                                  item.archived ? `<div class="flex gap-2"><button onclick="toggleArchive(${item.id})" class="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button><button onclick="moveToTrash(${item.id}, 'data')" class="text-red-400 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div>` :
-                                  `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95">Sell</button>`}
+                                  item.archived ? `<div class="flex gap-2"><button onclick="toggleArchive(${item.id})" class="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button><button onclick="moveToTrash(${item.id})" class="text-red-400 p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></div>` :
+                                  `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md">Sell</button>`}
                             </div>
                         </div>`;
                     list.appendChild(container);
@@ -214,16 +223,8 @@
 
             trash.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "p-4 border border-slate-200 rounded-[1.5rem] flex justify-between items-center opacity-60 bg-slate-100";
-                card.innerHTML = `
-                    <div class="flex-1">
-                        <p class="font-bold text-slate-600 text-xs">${item.name}</p>
-                        <p class="text-[8px] font-bold text-slate-400 uppercase">Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="restoreFromTrash(${item.id})" class="text-blue-600 font-bold text-[9px] uppercase px-2">Restore</button>
-                        <button onclick="permanentDelete(${item.id})" class="text-red-600 font-bold text-[9px] uppercase px-2">Burn</button>
-                    </div>`;
+                card.className = "p-4 border border-slate-200 rounded-[1.5rem] flex justify-between items-center bg-slate-100 opacity-70";
+                card.innerHTML = `<div class="flex-1"><p class="font-bold text-slate-600 text-xs">${item.name}</p><p class="text-[8px] font-bold text-slate-400 uppercase">Shelf: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}</p></div><div class="flex gap-2"><button onclick="restoreFromTrash(${item.id})" class="text-blue-600 font-bold text-[9px] uppercase">Restore</button><button onclick="permanentDelete(${item.id})" class="text-red-600 font-bold text-[9px] uppercase">Burn</button></div>`;
                 trashList.appendChild(card);
             });
 
@@ -237,19 +238,19 @@
         function restoreFromTrash(id) { data.push(trash.find(x => x.id === id)); trash = trash.filter(x => x.id !== id); update(); }
         function permanentDelete(id) { if(confirm("Delete forever?")) { trash = trash.filter(x => x.id !== id); update(); } }
         function toggleTrash() { document.getElementById('trash-list').classList.toggle('hidden'); }
-        function emptyTrash() { if(confirm("Clear all items in trash?")) { trash = []; update(); } }
+        function emptyTrash() { if(confirm("Clear trash?")) { trash = []; update(); } }
         
         function sellItem(id) { activeSaleId = id; const i = data.find(x => x.id === id); document.getElementById('sale-overlay').classList.remove('hidden'); document.getElementById('modal-sell-input').value = i.sold ? i.sell : ''; document.getElementById('edit-sold-options').classList.toggle('hidden', !i.sold); setTimeout(() => document.getElementById('modal-sell-input').focus(), 100); }
         function confirmSale() { const val = parseFloat(document.getElementById('modal-sell-input').value); const i = data.find(x => x.id === activeSaleId); if(i && !isNaN(val)) { i.sell = val; i.profit = val - i.totalPaid; i.sold = true; update(); } closeSaleModal(); }
         function resetToUnsold() { const i = data.find(x => x.id === activeSaleId); if(i) { i.sold = false; i.sell = 0; i.profit = 0; update(); } closeSaleModal(); }
         function closeSaleModal() { document.getElementById('sale-overlay').classList.add('hidden'); }
         
-        function handleRestore(input) { if (confirm("Warning: Restoring will overwrite all current data. Proceed?")) { const reader = new FileReader(); reader.onload = (e) => { try { const b = JSON.parse(e.target.result); data = b.data || []; trash = b.trash || []; update(); alert("Database Restored Successfully"); } catch(e) { alert("Invalid Backup File"); } }; reader.readAsText(input.files[0]); } input.value = ''; }
-        function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SeTrack_Backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
+        function handleRestore(input) { if (confirm("Restoring will replace all current data. Proceed?")) { const reader = new FileReader(); reader.onload = (e) => { const b = JSON.parse(e.target.result); data = b.data || []; trash = b.trash || []; update(); }; reader.readAsText(input.files[0]); } input.value = ''; }
+        function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SeTrack_Backup.json`; a.click(); }
         
-        function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-date-picker').value = new Date().toISOString().split('T')[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
+        function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
         function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); }
-        function confirmImport() { const date = document.getElementById('import-date-picker').value; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); closeImportModal(); }; reader.readAsText(pendingImportFile); }
+        function confirmImport() { const date = document.getElementById('import-date-picker').value; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); closeImportModal(); toggleAddModal(); }; reader.readAsText(pendingImportFile); }
 
         render();
     </script>
