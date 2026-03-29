@@ -12,6 +12,7 @@
         .tab-active { color: #2563eb; border-top: 2px solid #2563eb; }
         .action-btn { padding: 8px; border-radius: 12px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
         .action-btn:active { background-color: #f1f5f9; }
+        input[type="date"] { appearance: none; -webkit-appearance: none; min-height: 1.5rem; }
     </style>
 </head>
 <body class="bg-slate-50 pb-32">
@@ -43,6 +44,12 @@
 
         <div id="add-section" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-6">
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none">
+            
+            <div class="mb-4">
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Purchase Date</label>
+                <input id="in-date" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700">
+            </div>
+
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Shelf Price</label>
@@ -89,11 +96,6 @@
             <h3 id="modal-title" class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
             <input id="modal-sell-input" type="number" inputmode="decimal" placeholder="0.00" 
                    class="w-full text-center text-3xl font-black p-4 bg-slate-100 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500 mb-4">
-            
-            <div id="edit-sold-options" class="hidden mb-4">
-                <button onclick="resetToUnsold()" class="w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl uppercase text-[10px] border border-slate-200">Reset to Unsold</button>
-            </div>
-
             <div class="flex gap-3">
                 <button onclick="closeSaleModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button>
                 <button onclick="confirmSale()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Save</button>
@@ -122,15 +124,17 @@
         let currentTab = 'inventory';
         let activeSaleId = null;
 
+        // Set default date to today
+        document.getElementById('in-date').valueAsDate = new Date();
+
         function update() {
             localStorage.setItem('tracker_db', JSON.stringify(data));
             localStorage.setItem('tracker_trash', JSON.stringify(trash));
             render();
         }
 
-        // --- BACKUP & IMPORT LOGIC ---
         function exportBackup() {
-            const backup = { version: "2.5", data, trash };
+            const backup = { version: "2.6", data, trash };
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -153,7 +157,13 @@
 
         function batchAddItems(input) {
             if (!input.files || !input.files[0]) return;
-            const today = new Date().toLocaleDateString('en-CA');
+            
+            // Ask for date before processing
+            const defaultDate = new Date().toISOString().split('T')[0];
+            const importDate = prompt("Enter Purchase Date for these items (YYYY-MM-DD):", defaultDate);
+            
+            if (importDate === null) { input.value = ''; return; }
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const rows = e.target.result.split('\n').slice(1);
@@ -162,19 +172,19 @@
                     if(c.length < 2) return;
                     data.push({ 
                         id: Date.now() + Math.random(), 
-                        date: today, 
+                        date: importDate, 
                         name: c[0].replace(/"/g,'').trim(), 
                         listedPrice: parseFloat(c[1]) || 0, 
                         totalPaid: parseFloat(c[2]) || 0, 
                         sell: 0, profit: 0, sold: false, archived: false 
                     });
                 });
+                input.value = '';
                 update();
             };
             reader.readAsText(input.files[0]);
         }
 
-        // --- UI & TAB LOGIC ---
         function switchTab(tab) {
             currentTab = tab;
             ['inventory', 'sold', 'archive'].forEach(t => {
@@ -187,14 +197,27 @@
 
         function addItem() {
             const name = document.getElementById('in-name').value;
+            const date = document.getElementById('in-date').value;
             const shelf = parseFloat(document.getElementById('in-buy').value);
             const premium = 1 + (parseFloat(document.getElementById('in-premium').value) / 100);
             const fee = parseFloat(document.getElementById('in-fee').value);
             const tax = 1 + (parseFloat(document.getElementById('in-tax').value) / 100);
-            if(!name || isNaN(shelf)) return;
+            
+            if(!name || isNaN(shelf) || !date) return;
+            
             const totalCost = ((shelf * premium) + fee) * tax;
-            data.push({ id: Date.now(), name, date: new Date().toLocaleDateString('en-CA'), listedPrice: shelf, totalPaid: totalCost, sell: 0, profit: 0, sold: false, archived: false });
-            document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update();
+            data.push({ 
+                id: Date.now(), 
+                name, 
+                date, 
+                listedPrice: shelf, 
+                totalPaid: totalCost, 
+                sell: 0, profit: 0, sold: false, archived: false 
+            });
+            
+            document.getElementById('in-name').value = ''; 
+            document.getElementById('in-buy').value = ''; 
+            update();
         }
 
         function sellItem(id) {
@@ -207,17 +230,20 @@
         function confirmSale() {
             const val = parseFloat(document.getElementById('modal-sell-input').value);
             const item = data.find(i => i.id === activeSaleId);
-            if (item && !isNaN(val)) { item.sell = val; item.profit = val - item.totalPaid; item.sold = true; update(); }
+            if (item && !isNaN(val)) { 
+                item.sell = val; 
+                item.profit = val - item.totalPaid; 
+                item.sold = true; 
+                update(); 
+            }
             closeSaleModal();
         }
 
         function closeSaleModal() { document.getElementById('sale-overlay').classList.add('hidden'); }
-
         function toggleArchive(id) {
             const item = data.find(i => i.id === id);
             if (item) { item.archived = !item.archived; update(); }
         }
-
         function moveToTrash(id) { trash.push(data.find(i => i.id === id)); data = data.filter(i => i.id !== id); update(); }
         function restoreItem(id) { data.push(trash.find(i => i.id === id)); trash = trash.filter(i => i.id !== id); update(); }
         function permanentDelete(id) { if(confirm("Delete forever?")) { trash = trash.filter(i => i.id !== id); update(); } }
