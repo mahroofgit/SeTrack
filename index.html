@@ -26,7 +26,7 @@
                 </label>
                 <label class="bg-blue-600 text-white w-8 h-8 flex items-center justify-center rounded-full cursor-pointer ml-1 shadow-md active:scale-90 transition-transform">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="batchAddItems(this)">
+                    <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="openImportModal(this)">
                 </label>
             </div>
         </header>
@@ -44,12 +44,10 @@
 
         <div id="add-section" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-6">
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none">
-            
             <div class="mb-4">
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Purchase Date</label>
                 <input id="in-date" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700">
             </div>
-
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Shelf Price</label>
@@ -91,6 +89,18 @@
         </div>
     </div>
 
+    <div id="import-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl">
+            <h3 class="text-center font-black text-slate-800 uppercase tracking-tight mb-2">Import Date</h3>
+            <p class="text-[10px] text-slate-400 text-center font-bold uppercase mb-4">Set date for all imported items</p>
+            <input id="import-date-input" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold text-slate-700 mb-6">
+            <div class="flex gap-3">
+                <button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button>
+                <button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import</button>
+            </div>
+        </div>
+    </div>
+
     <div id="sale-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl">
             <h3 id="modal-title" class="text-center font-black text-slate-800 uppercase tracking-tight mb-4">Sale Price</h3>
@@ -123,9 +133,12 @@
         let trash = JSON.parse(localStorage.getItem('tracker_trash')) || [];
         let currentTab = 'inventory';
         let activeSaleId = null;
+        let pendingImportFile = null;
 
-        // Set default date to today
-        document.getElementById('in-date').valueAsDate = new Date();
+        // Set default dates to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('in-date').value = today;
+        document.getElementById('import-date-input').value = today;
 
         function update() {
             localStorage.setItem('tracker_db', JSON.stringify(data));
@@ -133,8 +146,46 @@
             render();
         }
 
+        // --- IMPROVED IMPORT LOGIC ---
+        function openImportModal(input) {
+            if (!input.files || !input.files[0]) return;
+            pendingImportFile = input.files[0];
+            document.getElementById('import-overlay').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-overlay').classList.add('hidden');
+            pendingImportFile = null;
+            document.getElementById('batch-file').value = '';
+        }
+
+        function confirmImport() {
+            const importDate = document.getElementById('import-date-input').value;
+            if (!importDate || !pendingImportFile) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const rows = e.target.result.split('\n').slice(1);
+                rows.forEach(row => {
+                    const c = row.split(','); 
+                    if(c.length < 2) return;
+                    data.push({ 
+                        id: Date.now() + Math.random(), 
+                        date: importDate, 
+                        name: c[0].replace(/"/g,'').trim(), 
+                        listedPrice: parseFloat(c[1]) || 0, 
+                        totalPaid: parseFloat(c[2]) || 0, 
+                        sell: 0, profit: 0, sold: false, archived: false 
+                    });
+                });
+                closeImportModal();
+                update();
+            };
+            reader.readAsText(pendingImportFile);
+        }
+
         function exportBackup() {
-            const backup = { version: "2.6", data, trash };
+            const backup = { version: "2.7", data, trash };
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -155,36 +206,7 @@
             reader.readAsText(input.files[0]);
         }
 
-        function batchAddItems(input) {
-            if (!input.files || !input.files[0]) return;
-            
-            // Ask for date before processing
-            const defaultDate = new Date().toISOString().split('T')[0];
-            const importDate = prompt("Enter Purchase Date for these items (YYYY-MM-DD):", defaultDate);
-            
-            if (importDate === null) { input.value = ''; return; }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const rows = e.target.result.split('\n').slice(1);
-                rows.forEach(row => {
-                    const c = row.split(','); 
-                    if(c.length < 2) return;
-                    data.push({ 
-                        id: Date.now() + Math.random(), 
-                        date: importDate, 
-                        name: c[0].replace(/"/g,'').trim(), 
-                        listedPrice: parseFloat(c[1]) || 0, 
-                        totalPaid: parseFloat(c[2]) || 0, 
-                        sell: 0, profit: 0, sold: false, archived: false 
-                    });
-                });
-                input.value = '';
-                update();
-            };
-            reader.readAsText(input.files[0]);
-        }
-
+        // --- UI & TAB LOGIC ---
         function switchTab(tab) {
             currentTab = tab;
             ['inventory', 'sold', 'archive'].forEach(t => {
@@ -206,15 +228,7 @@
             if(!name || isNaN(shelf) || !date) return;
             
             const totalCost = ((shelf * premium) + fee) * tax;
-            data.push({ 
-                id: Date.now(), 
-                name, 
-                date, 
-                listedPrice: shelf, 
-                totalPaid: totalCost, 
-                sell: 0, profit: 0, sold: false, archived: false 
-            });
-            
+            data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: totalCost, sell: 0, profit: 0, sold: false, archived: false });
             document.getElementById('in-name').value = ''; 
             document.getElementById('in-buy').value = ''; 
             update();
@@ -230,12 +244,7 @@
         function confirmSale() {
             const val = parseFloat(document.getElementById('modal-sell-input').value);
             const item = data.find(i => i.id === activeSaleId);
-            if (item && !isNaN(val)) { 
-                item.sell = val; 
-                item.profit = val - item.totalPaid; 
-                item.sold = true; 
-                update(); 
-            }
+            if (item && !isNaN(val)) { item.sell = val; item.profit = val - item.totalPaid; item.sold = true; update(); }
             closeSaleModal();
         }
 
