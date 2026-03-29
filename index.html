@@ -38,17 +38,27 @@
 
         <div id="add-section" class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 mb-8">
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none">
-            <div class="flex gap-3 mb-4">
-                <div class="w-1/2">
+            
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Shelf Price</label>
                     <input id="in-buy" type="number" placeholder="0.00" class="w-full p-4 bg-slate-100 rounded-2xl outline-none">
                 </div>
-                <div class="w-1/2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Premium %</label>
+                    <input id="in-premium" type="number" value="16" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-center font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Handling Fee $</label>
+                    <input id="in-fee" type="number" value="1.50" step="0.50" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-center font-bold">
+                </div>
+                <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Tax %</label>
                     <input id="in-tax" type="number" value="13" class="w-full p-4 bg-slate-100 rounded-2xl outline-none text-center font-bold">
                 </div>
             </div>
-            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all uppercase">Add Item</button>
+            
+            <button onclick="addItem()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-all uppercase">Add to Inventory</button>
         </div>
 
         <div id="item-list" class="space-y-3"></div>
@@ -95,11 +105,26 @@
 
         function addItem() {
             const name = document.getElementById('in-name').value;
-            const listed = parseFloat(document.getElementById('in-buy').value);
-            const taxRate = parseFloat(document.getElementById('in-tax').value) / 100;
-            if(!name || isNaN(listed)) return;
-            const totalCost = listed * (1 + taxRate);
-            data.push({ id: Date.now(), name, listedPrice: listed, totalPaid: totalCost, sell: 0, profit: 0, sold: false });
+            const shelf = parseFloat(document.getElementById('in-buy').value);
+            const premium = 1 + (parseFloat(document.getElementById('in-premium').value) / 100);
+            const fee = parseFloat(document.getElementById('in-fee').value);
+            const tax = 1 + (parseFloat(document.getElementById('in-tax').value) / 100);
+
+            if(!name || isNaN(shelf)) return;
+
+            // Formula: ((Shelf * Premium) + Fee) * Tax
+            const totalCost = ((shelf * premium) + fee) * tax;
+
+            data.push({ 
+                id: Date.now(), 
+                name, 
+                listedPrice: shelf, 
+                totalPaid: totalCost, 
+                sell: 0, 
+                profit: 0, 
+                sold: false 
+            });
+
             document.getElementById('in-name').value = '';
             document.getElementById('in-buy').value = '';
             update();
@@ -159,8 +184,6 @@
             list.innerHTML = '';
             trashList.innerHTML = '';
 
-            // Calculate total profit from sold items
-            // Calculate total investment from ALL items (Sold + Unsold)
             data.forEach(item => {
                 if(item.sold) totalProfit += item.profit;
                 totalInvestment += item.totalPaid;
@@ -182,7 +205,7 @@
                     <div class="flex-1 pr-4" onclick="editItem(${item.id})">
                         <p class="font-bold text-slate-800 item-name ${item.sold ? 'opacity-40' : ''}">${item.name}</p>
                         <div class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">
-                            Shelf: $${(item.listedPrice || 0).toFixed(2)} | Paid: $${item.totalPaid.toFixed(2)}
+                            Shelf: $${(item.listedPrice || 0).toFixed(2)} | Investment: $${item.totalPaid.toFixed(2)}
                             ${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}
                         </div>
                     </div>
@@ -215,8 +238,9 @@
             document.getElementById('trash-count').innerText = trash.length;
         }
 
+        // CSV Logic
         function exportCSV() {
-            let csv = "Name,ListedPrice,TotalPaid,Sell,Profit,Sold\n";
+            let csv = "Name,ShelfPrice,TotalInvestment,SalePrice,Profit,Sold\n";
             data.forEach(i => csv += `"${i.name}",${(i.listedPrice||0).toFixed(2)},${i.totalPaid.toFixed(2)},${i.sell.toFixed(2)},${i.profit.toFixed(2)},${i.sold}\n`);
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
