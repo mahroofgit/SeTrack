@@ -24,9 +24,13 @@
         <header class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">SeTrack</h1>
             <div class="flex gap-2 items-center">
-                <button onclick="exportBackup()" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase">Backup</button>
-                <label class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase cursor-pointer">
+                <button onclick="exportBackup()" class="bg-slate-200 text-slate-700 px-2 py-1.5 rounded-lg text-[9px] font-bold uppercase">Backup</button>
+                <label class="bg-slate-800 text-white px-2 py-1.5 rounded-lg text-[9px] font-bold uppercase cursor-pointer">
                     Restore <input type="file" id="restore-file" accept=".json" class="hidden" onchange="handleRestore(this)">
+                </label>
+                <label class="bg-blue-100 text-blue-600 w-10 h-10 flex items-center justify-center rounded-full shadow-sm cursor-pointer active:scale-90 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <input type="file" id="home-batch-file" accept=".csv" class="hidden" onchange="openImportModal(this)">
                 </label>
                 <button onclick="toggleAddModal()" class="bg-blue-600 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-lg active:scale-90 transition-transform">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -63,13 +67,7 @@
 
     <div id="add-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl relative">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="font-black text-slate-800 uppercase tracking-tight">Quick Add</h3>
-                <label class="bg-slate-100 p-2 rounded-xl cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <input type="file" id="batch-file" accept=".csv" class="hidden" onchange="openImportModal(this)">
-                </label>
-            </div>
+            <h3 class="font-black text-slate-800 uppercase tracking-tight mb-4 text-center">Quick Add</h3>
             
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none font-medium">
             
@@ -86,8 +84,8 @@
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fixed Fee ($)</label>
                         <div class="flex gap-2">
-                            <button onclick="setQuickFee(1.5, 'enc')" id="btn-enc" class="fee-btn active px-3 py-1 rounded-lg text-[10px] font-black">ENC ($1.50)</button>
-                            <button onclick="setQuickFee(1.0, 'amz')" id="btn-amz" class="fee-btn px-3 py-1 rounded-lg text-[10px] font-black">AMZ ($1.00)</button>
+                            <button onclick="setQuickFee(1.5, 'enc')" id="btn-enc" class="fee-btn active px-3 py-1 rounded-lg text-[10px] font-black">ENC</button>
+                            <button onclick="setQuickFee(1.0, 'amz')" id="btn-amz" class="fee-btn px-3 py-1 rounded-lg text-[10px] font-black">AMZ</button>
                         </div>
                     </div>
                     <input id="in-fee" type="number" value="1.50" step="0.01" oninput="calcLiveTotal(); clearFeeToggles();" class="w-full p-1 bg-transparent outline-none font-bold text-lg">
@@ -127,7 +125,7 @@
 
             <div class="flex gap-3">
                 <button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button>
-                <button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import Items</button>
+                <button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Process CSV</button>
             </div>
         </div>
     </div>
@@ -205,7 +203,7 @@
             const total = calcLiveTotal();
             const date = document.getElementById('in-date').value;
             const fee = parseFloat(document.getElementById('in-fee').value);
-            const src = fee === 1.0 ? 'AMZ' : 'ENC'; // Guess source based on fee for single items
+            const src = fee === 1.0 ? 'AMZ' : 'ENC';
             data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: total, sell: 0, profit: 0, sold: false, archived: false, feeValue: fee, source: src });
             document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update(); toggleAddModal();
         }
@@ -246,7 +244,6 @@
                 return true;
             }).filter(i => i.name.toLowerCase().includes(document.getElementById('search-input').value.toLowerCase()));
 
-            // GROUP BY DATE + SOURCE to prevent overwriting/merging of different imports
             const groups = filtered.reduce((acc, i) => { 
                 const d = i.date || "Legacy"; 
                 const s = i.source || "ENC";
@@ -258,15 +255,9 @@
 
             Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(key => {
                 const [date, source] = key.split('_');
-                
-                // Calculate GLOBAL stats for this specific batch (Date + Source)
                 const allItemsInBatch = data.filter(d => (d.date || "Legacy") === date && (d.source || "ENC") === source);
                 let batchCost = 0, batchProfit = 0;
-                allItemsInBatch.forEach(item => {
-                    batchCost += item.totalPaid;
-                    if (item.sold) batchProfit += item.profit;
-                });
-
+                allItemsInBatch.forEach(item => { batchCost += item.totalPaid; if (item.sold) batchProfit += item.profit; });
                 const batchROI = batchCost > 0 ? ((batchProfit / batchCost) * 100).toFixed(0) : 0;
 
                 const header = document.createElement('div');
@@ -331,8 +322,9 @@
         function handleRestore(input) { if (confirm("Restore backup?")) { const reader = new FileReader(); reader.onload = (e) => { const b = JSON.parse(e.target.result); data = b.data || []; trash = b.trash || []; update(); }; reader.readAsText(input.files[0]); } input.value = ''; }
         function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
         
+        // CSV IMPORT LOGIC
         function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
-        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); }
+        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); document.getElementById('home-batch-file').value = ''; }
         
         function confirmImport() { 
             const date = document.getElementById('import-date-picker').value; 
@@ -359,7 +351,7 @@
                         }); 
                     }
                 }); 
-                update(); closeImportModal(); toggleAddModal(); 
+                update(); closeImportModal();
             }; 
             reader.readAsText(pendingImportFile); 
         }
