@@ -17,8 +17,6 @@
         .swiped { transform: translateX(-140px); }
         
         input[type="date"] { appearance: none; -webkit-appearance: none; min-height: 2.5rem; }
-
-        /* Fee Switcher Styles */
         .fee-btn { transition: all 0.2s; border: 1px solid transparent; }
         .fee-btn.active { background-color: #dbeafe; color: #1e40af; border-color: #93c5fd; }
     </style>
@@ -88,11 +86,11 @@
                     <div class="flex justify-between items-center mr-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fixed Fee $</label>
                         <div class="flex gap-1">
-                            <button onclick="setQuickFee(1.5, 'enc')" id="btn-enc" class="fee-btn active px-1 rounded text-[8px] font-black">ENC</button>
-                            <button onclick="setQuickFee(1, 'amz')" id="btn-amz" class="fee-btn px-1 rounded text-[8px] font-black">AMZ</button>
+                            <button onclick="setQuickFee(1.5, 'enc', 'in-fee')" id="btn-enc" class="fee-btn active px-1 rounded text-[8px] font-black">ENC</button>
+                            <button onclick="setQuickFee(1, 'amz', 'in-fee')" id="btn-amz" class="fee-btn px-1 rounded text-[8px] font-black">AMZ</button>
                         </div>
                     </div>
-                    <input id="in-fee" type="number" value="1.50" oninput="calcLiveTotal(); clearFeeToggles();" class="w-full p-1 bg-transparent outline-none font-bold">
+                    <input id="in-fee" type="number" value="1.50" oninput="calcLiveTotal(); clearFeeToggles('add');" class="w-full p-1 bg-transparent outline-none font-bold">
                 </div>
 
                 <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
@@ -112,10 +110,31 @@
     </div>
 
     <div id="import-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center">
-            <h3 class="font-black text-slate-800 uppercase mb-4">Import Date</h3>
-            <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold mb-6">
-            <div class="flex gap-3"><button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import</button></div>
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl">
+            <h3 class="font-black text-slate-800 uppercase mb-4 text-center">Import Settings</h3>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-2 mb-1 block">Purchase Date</label>
+                    <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold">
+                </div>
+
+                <div class="bg-slate-100 p-3 rounded-2xl relative">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fixed Fee $</label>
+                        <div class="flex gap-1">
+                            <button onclick="setQuickFee(1.5, 'enc', 'import-fee')" id="import-btn-enc" class="fee-btn active px-2 py-1 rounded text-[9px] font-black">ENC</button>
+                            <button onclick="setQuickFee(1, 'amz', 'import-fee')" id="import-btn-amz" class="fee-btn px-2 py-1 rounded text-[9px] font-black">AMZ</button>
+                        </div>
+                    </div>
+                    <input id="import-fee" type="number" value="1.50" oninput="clearFeeToggles('import')" class="w-full p-1 bg-transparent outline-none font-bold text-lg">
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button>
+                <button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px] shadow-lg">Start Import</button>
+            </div>
         </div>
     </div>
 
@@ -152,6 +171,7 @@
         let pendingImportFile = null;
 
         document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('import-date-picker').value = new Date().toISOString().split('T')[0];
 
         function update() {
             localStorage.setItem('tracker_db', JSON.stringify(data));
@@ -161,16 +181,18 @@
 
         function toggleAddModal() { document.getElementById('add-modal').classList.toggle('hidden'); calcLiveTotal(); }
 
-        function setQuickFee(val, type) {
-            document.getElementById('in-fee').value = val.toFixed(2);
-            document.getElementById('btn-enc').classList.toggle('active', type === 'enc');
-            document.getElementById('btn-amz').classList.toggle('active', type === 'amz');
-            calcLiveTotal();
+        function setQuickFee(val, type, targetInputId) {
+            document.getElementById(targetInputId).value = val.toFixed(2);
+            const prefix = targetInputId.includes('import') ? 'import-' : '';
+            document.getElementById(`${prefix}btn-enc`).classList.toggle('active', type === 'enc');
+            document.getElementById(`${prefix}btn-amz`).classList.toggle('active', type === 'amz');
+            if(targetInputId === 'in-fee') calcLiveTotal();
         }
 
-        function clearFeeToggles() {
-            document.getElementById('btn-enc').classList.remove('active');
-            document.getElementById('btn-amz').classList.remove('active');
+        function clearFeeToggles(mode) {
+            const prefix = mode === 'import' ? 'import-' : '';
+            document.getElementById(`${prefix}btn-enc`).classList.remove('active');
+            document.getElementById(`${prefix}btn-amz`).classList.remove('active');
         }
 
         function calcLiveTotal() {
@@ -197,15 +219,6 @@
         function editName(id) {
             const i = data.find(x => x.id === id);
             if (i) { const n = prompt("Edit Item Name:", i.name); if(n) { i.name = n; update(); } }
-        }
-
-        function ts(e) { startX = e.touches[0].clientX; }
-        function te(e, id) {
-            if (currentTab !== 'inventory') return;
-            let diff = startX - e.changedTouches[0].clientX;
-            const row = document.getElementById(`row-${id}`);
-            if (diff > 60) row.classList.add('swiped');
-            else if (diff < -60) row.classList.remove('swiped');
         }
 
         function switchTab(tab) {
@@ -249,7 +262,7 @@
 
                     container.innerHTML = `
                         ${actionHtml}
-                        <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
+                        <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" ontouchstart="startX = event.touches[0].clientX" ontouchend="let diff = startX - event.changedTouches[0].clientX; if(currentTab==='inventory'){if(diff>60)this.classList.add('swiped'); else if(diff<-60)this.classList.remove('swiped');}">
                             <div class="flex-1 pr-4">
                                 <p onclick="editName(${item.id})" class="font-bold text-slate-800 item-name cursor-pointer">${item.name}</p>
                                 <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Bid: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}</p>
@@ -292,18 +305,56 @@
         
         function exportBackup() { 
             const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'});
-            const now = new Date();
-            const dateStr = now.toISOString().split('T')[0];
-            const timeStr = now.getHours().toString().padStart(2, '0') + '-' + now.getMinutes().toString().padStart(2, '0');
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `SeTrack_Backup_${dateStr}_${timeStr}.json`;
+            a.download = `SeTrack_Backup_${new Date().toISOString().split('T')[0]}.json`;
             a.click();
         }
         
         function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
-        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); }
-        function confirmImport() { const date = document.getElementById('import-date-picker').value; const reader = new FileReader(); reader.onload = (e) => { e.target.result.split('\n').slice(1).forEach(row => { const c = row.split(','); if(c.length > 1) data.push({ id: Date.now()+Math.random(), date, name: c[0].replace(/"/g,'').trim(), listedPrice: parseFloat(c[1])||0, totalPaid: parseFloat(c[2])||0, sell:0, profit:0, sold:false, archived:false }); }); update(); closeImportModal(); toggleAddModal(); }; reader.readAsText(pendingImportFile); }
+        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); document.getElementById('batch-file').value = ''; }
+        
+        function confirmImport() { 
+            const date = document.getElementById('import-date-picker').value; 
+            const feeVal = parseFloat(document.getElementById('import-fee').value || 0);
+            
+            // Get current global settings for the formula
+            const premVal = 1 + (parseFloat(document.getElementById('in-premium').value || 0) / 100);
+            const taxVal = 1 + (parseFloat(document.getElementById('in-tax').value || 0) / 100);
+
+            const reader = new FileReader(); 
+            reader.onload = (e) => { 
+                const lines = e.target.result.split('\n');
+                lines.forEach((row, index) => { 
+                    if(index === 0 && row.toLowerCase().includes('name')) return; // skip header
+                    const c = row.split(','); 
+                    if(c.length >= 2) {
+                        const name = c[0].replace(/"/g,'').trim();
+                        const bid = parseFloat(c[1]) || 0;
+                        // Calculation: ((Bid * Prem) + DynamicFee) * Tax
+                        const calculatedCost = ((bid * premVal) + feeVal) * taxVal;
+
+                        if(name) {
+                            data.push({ 
+                                id: Date.now() + Math.random(), 
+                                date, 
+                                name, 
+                                listedPrice: bid, 
+                                totalPaid: calculatedCost, 
+                                sell: 0, 
+                                profit: 0, 
+                                sold: false, 
+                                archived: false 
+                            });
+                        }
+                    } 
+                }); 
+                update(); 
+                closeImportModal(); 
+                toggleAddModal(); 
+            }; 
+            reader.readAsText(pendingImportFile); 
+        }
 
         render();
     </script>
