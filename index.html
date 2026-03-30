@@ -17,6 +17,10 @@
         .swiped { transform: translateX(-140px); }
         
         input[type="date"] { appearance: none; -webkit-appearance: none; min-height: 2.5rem; }
+
+        /* Fee Switcher Styles */
+        .fee-btn { transition: all 0.2s; border: 1px solid transparent; }
+        .fee-btn.active { background-color: #dbeafe; color: #1e40af; border-color: #93c5fd; }
     </style>
 </head>
 <body class="bg-slate-50 pb-32">
@@ -79,7 +83,18 @@
                     <input id="in-buy" type="number" inputmode="decimal" placeholder="Enter Bid Amount" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-black text-2xl text-blue-600">
                 </div>
                 <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Premium %</label><input id="in-premium" type="number" value="16" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
-                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fixed Fee $</label><input id="in-fee" type="number" value="1.50" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                
+                <div class="bg-slate-100 p-2 rounded-2xl relative">
+                    <div class="flex justify-between items-center mr-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fixed Fee $</label>
+                        <div class="flex gap-1">
+                            <button onclick="setQuickFee(1.5, 'enc')" id="btn-enc" class="fee-btn active px-1 rounded text-[8px] font-black">ENC</button>
+                            <button onclick="setQuickFee(1, 'amz')" id="btn-amz" class="fee-btn px-1 rounded text-[8px] font-black">AMZ</button>
+                        </div>
+                    </div>
+                    <input id="in-fee" type="number" value="1.50" oninput="calcLiveTotal(); clearFeeToggles();" class="w-full p-1 bg-transparent outline-none font-bold">
+                </div>
+
                 <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
                 <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Date</label><input id="in-date" type="date" class="w-full bg-transparent outline-none font-bold text-[10px]"></div>
             </div>
@@ -144,18 +159,25 @@
             render();
         }
 
-        function toggleAddModal() { 
-            document.getElementById('add-modal').classList.toggle('hidden'); 
-            calcLiveTotal(); 
+        function toggleAddModal() { document.getElementById('add-modal').classList.toggle('hidden'); calcLiveTotal(); }
+
+        function setQuickFee(val, type) {
+            document.getElementById('in-fee').value = val.toFixed(2);
+            document.getElementById('btn-enc').classList.toggle('active', type === 'enc');
+            document.getElementById('btn-amz').classList.toggle('active', type === 'amz');
+            calcLiveTotal();
         }
 
-        // Live Calculator Logic
+        function clearFeeToggles() {
+            document.getElementById('btn-enc').classList.remove('active');
+            document.getElementById('btn-amz').classList.remove('active');
+        }
+
         function calcLiveTotal() {
             const shelf = parseFloat(document.getElementById('in-buy').value) || 0;
             const prem = 1 + (parseFloat(document.getElementById('in-premium').value || 0) / 100);
             const fee = parseFloat(document.getElementById('in-fee').value || 0);
             const tax = 1 + (parseFloat(document.getElementById('in-tax').value || 0) / 100);
-            
             const total = ((shelf * prem) + fee) * tax;
             document.getElementById('live-calc-total').innerText = `$${total.toFixed(2)}`;
             return total;
@@ -165,26 +187,11 @@
             const name = document.getElementById('in-name').value;
             const shelf = parseFloat(document.getElementById('in-buy').value);
             if(!name || isNaN(shelf)) return;
-            
             const total = calcLiveTotal();
             const date = document.getElementById('in-date').value;
-
-            data.push({ 
-                id: Date.now(), 
-                name, 
-                date, 
-                listedPrice: shelf, 
-                totalPaid: total, 
-                sell: 0, 
-                profit: 0, 
-                sold: false, 
-                archived: false 
-            });
-
-            document.getElementById('in-name').value = ''; 
-            document.getElementById('in-buy').value = ''; 
-            toggleAddModal(); 
-            update();
+            data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: total, sell: 0, profit: 0, sold: false, archived: false });
+            document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; 
+            toggleAddModal(); update();
         }
 
         function editName(id) {
@@ -234,7 +241,6 @@
                     const container = document.createElement('div');
                     container.className = "swipe-container";
                     const roiVal = item.sold ? ((item.profit / item.totalPaid) * 100) : 0;
-                    
                     let pClass = "text-green-600";
                     if (item.profit < 0) pClass = "text-red-600";
                     else if (roiVal >= 100) pClass = "high-roi";
