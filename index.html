@@ -728,14 +728,14 @@
                     <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[8px] font-bold text-slate-400 uppercase tracking-tight">
                         <span><b class="text-blue-600">${source}</b></span>
                         <span>Cost: <b class="text-slate-800">$${bCost.toFixed(
-                          1
+                          2
                         )}</b></span>
                         <span>Profit: <b class="${
                           bProf >= 0 ? "text-green-600" : "text-red-600"
-                        }">$${bProf.toFixed(1)}</b></span>
+                        }">$${bProf.toFixed(2)}</b></span>
                         <span>ROI: <b>${roi}%</b></span>
                         <span>BE: <b class="text-slate-800">$${be.toFixed(
-                          1
+                          2
                         )}</b></span>
                     </div>`;
             list.appendChild(head);
@@ -910,19 +910,30 @@
         const b = parseFloat(document.getElementById("in-buy").value);
         if (!n || isNaN(b)) return;
         const f = parseFloat(document.getElementById("in-fee").value || 1.5);
-        const tot = (b * 1.16 + f) * 1.13;
+        const date = document.getElementById("in-date").value;
+        const isAmz = document
+          .getElementById("btn-amz")
+          .classList.contains("active");
+
+        // Calculate Total Paid based on Source
+        // AMZ: Tax (13%) is only on (Bid * Premium). Fee is added after tax.
+        // ENC: Tax (13%) is on the entire sum (Bid * Premium + Fee).
+        const bidWithPrem = b * 1.16;
+        const tot = isAmz ? bidWithPrem * 1.13 + f : (bidWithPrem + f) * 1.13;
+
         db.push({
           id: Date.now(),
           name: n,
-          date: document.getElementById("in-date").value,
+          date: date,
           bid: b,
           totalPaid: tot,
           sell: 0,
           profit: 0,
           sold: false,
           archived: false,
-          source: f === 1.0 ? "AMZ" : "ENC",
+          source: isAmz ? "AMZ" : "ENC",
         });
+
         document.getElementById("in-name").value = "";
         document.getElementById("in-buy").value = "";
         save();
@@ -1034,7 +1045,11 @@
               const c = row.split(",");
               if (c.length > 1) {
                 const b = parseFloat(c[1]) || 0;
-                const tot = (b * 1.16 + fee) * 1.13;
+                const bidWithPrem = b * 1.16;
+                const tot =
+                  impSrc === "AMZ"
+                    ? bidWithPrem * 1.13 + fee // Tax doesn't touch the fee
+                    : (bidWithPrem + fee) * 1.13; // ENC style (everything taxed)
                 db.push({
                   id: Date.now() + Math.random(),
                   date: dt,
