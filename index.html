@@ -314,46 +314,44 @@
         function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
         function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); document.getElementById('batch-file').value = ''; }
         
-        function confirmImport() { 
-            const date = document.getElementById('import-date-picker').value; 
-            const feeVal = parseFloat(document.getElementById('import-fee').value || 0);
-            
-            // Get current global settings for the formula
-            const premVal = 1 + (parseFloat(document.getElementById('in-premium').value || 0) / 100);
-            const taxVal = 1 + (parseFloat(document.getElementById('in-tax').value || 0) / 100);
-
-            const reader = new FileReader(); 
-            reader.onload = (e) => { 
-                const lines = e.target.result.split('\n');
-                lines.forEach((row, index) => { 
-                    if(index === 0 && row.toLowerCase().includes('name')) return; // skip header
-                    const c = row.split(','); 
-                    if(c.length >= 2) {
-                        const name = c[0].replace(/"/g,'').trim();
-                        const bid = parseFloat(c[1]) || 0;
-                        // Calculation: ((Bid * Prem) + DynamicFee) * Tax
-                        const calculatedCost = ((bid * premVal) + feeVal) * taxVal;
-
-                        if(name) {
-                            data.push({ 
-                                id: Date.now() + Math.random(), 
-                                date, 
-                                name, 
-                                listedPrice: bid, 
-                                totalPaid: calculatedCost, 
-                                sell: 0, 
-                                profit: 0, 
-                                sold: false, 
-                                archived: false 
-                            });
-                        }
-                    } 
-                }); 
-                update(); 
-                closeImportModal(); 
-                toggleAddModal(); 
-            }; 
-            reader.readAsText(pendingImportFile); 
+        // This updated function replaces the old one inside the <script> tag
+        function confirmImport() {
+            const date = document.getElementById('import-date-picker').value;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const rows = e.target.result.split('\n').slice(1);
+                rows.forEach(row => {
+                    // Updated Regex: Handles commas inside quotes correctly
+                    const c = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                    
+                    if (c && c.length >= 2) {
+                        const rawName = c[0].replace(/"/g, '').trim();
+                        const rawBid = parseFloat(c[1]) || 0;
+                        
+                        // Calculate total using current modal defaults
+                        const prem = 1 + (parseFloat(document.getElementById('in-premium').value || 0) / 100);
+                        const fee = parseFloat(document.getElementById('in-fee').value || 0);
+                        const tax = 1 + (parseFloat(document.getElementById('in-tax').value || 0) / 100);
+                        const calculatedTotal = ((rawBid * prem) + fee) * tax;
+        
+                        data.push({ 
+                            id: Date.now() + Math.random(), 
+                            date, 
+                            name: rawName, 
+                            listedPrice: rawBid, 
+                            totalPaid: calculatedTotal, 
+                            sell: 0, 
+                            profit: 0, 
+                            sold: false, 
+                            archived: false 
+                        });
+                    }
+                });
+                update();
+                closeImportModal();
+                toggleAddModal();
+            };
+            reader.readAsText(pendingImportFile);
         }
 
         render();
