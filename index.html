@@ -62,7 +62,7 @@
     </div>
 
     <div id="add-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl relative">
+        <div class="bg-white w-full max-sm rounded-[2.5rem] p-6 shadow-2xl relative">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-black text-slate-800 uppercase tracking-tight">New Item</h3>
                 <label class="bg-slate-100 p-2 rounded-xl cursor-pointer">
@@ -91,8 +91,8 @@
     </div>
 
     <div id="import-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
-            <h3 class="text-center font-black text-slate-800 uppercase mb-4">CSV Import Date</h3>
+        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center">
+            <h3 class="font-black text-slate-800 uppercase mb-4">Import Date</h3>
             <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold mb-6">
             <div class="flex gap-3"><button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button><button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import</button></div>
         </div>
@@ -246,7 +246,17 @@
         function closeSaleModal() { document.getElementById('sale-overlay').classList.add('hidden'); }
         
         function handleRestore(input) { if (confirm("Restoring will replace all current data. Proceed?")) { const reader = new FileReader(); reader.onload = (e) => { const b = JSON.parse(e.target.result); data = b.data || []; trash = b.trash || []; update(); }; reader.readAsText(input.files[0]); } input.value = ''; }
-        function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `SeTrack_Backup.json`; a.click(); }
+        
+        function exportBackup() { 
+            const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'});
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.getHours().toString().padStart(2, '0') + '-' + now.getMinutes().toString().padStart(2, '0');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `SeTrack_Backup_${dateStr}_${timeStr}.json`;
+            a.click();
+        }
         
         function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
         function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); }
