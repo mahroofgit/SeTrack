@@ -68,18 +68,14 @@
     <div id="add-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-6 shadow-2xl relative">
             <h3 class="font-black text-slate-800 uppercase tracking-tight mb-4 text-center">Quick Add</h3>
-            
             <input id="in-name" type="text" placeholder="Item Name" class="w-full mb-3 p-4 bg-slate-100 rounded-2xl outline-none font-medium">
-            
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="col-span-2 bg-blue-50 p-3 rounded-2xl border border-blue-100">
                     <label class="text-[9px] font-black text-blue-500 uppercase ml-2 mb-1 block">Live Calculator (Bid $)</label>
                     <input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-black text-2xl text-blue-600">
                 </div>
-                
                 <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Premium %</label><input id="in-premium" type="number" value="16" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
                 <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
-
                 <div class="col-span-2 bg-slate-100 p-3 rounded-2xl">
                     <div class="flex justify-between items-center mb-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Fixed Fee ($)</label>
@@ -90,18 +86,15 @@
                     </div>
                     <input id="in-fee" type="number" value="1.50" step="0.01" oninput="calcLiveTotal(); clearFeeToggles();" class="w-full p-1 bg-transparent outline-none font-bold text-lg">
                 </div>
-
                 <div class="col-span-2 bg-slate-100 p-2 rounded-2xl">
                     <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Purchase Date</label>
                     <input id="in-date" type="date" class="w-full bg-transparent outline-none font-bold text-sm">
                 </div>
             </div>
-
             <div class="bg-slate-900 rounded-2xl p-4 mb-6 flex justify-between items-center">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Calculated Cost:</span>
                 <span id="live-calc-total" class="text-white font-black text-xl">$0.00</span>
             </div>
-            
             <div class="flex gap-3"><button onclick="toggleAddModal()" class="flex-1 py-4 font-bold text-slate-400 uppercase text-xs">Close</button><button onclick="addItem()" class="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl uppercase shadow-lg shadow-blue-200">Add Item</button></div>
         </div>
     </div>
@@ -110,6 +103,11 @@
         <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
             <h3 class="font-black text-slate-800 uppercase mb-4 text-center">Batch Import</h3>
             
+            <div class="mb-4 bg-blue-50 border border-blue-100 p-3 rounded-2xl flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span id="display-filename" class="text-[11px] font-bold text-blue-700 truncate flex-1">No file selected</span>
+            </div>
+
             <div class="mb-4">
                 <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 block mb-1">Select Source</label>
                 <div class="flex gap-2">
@@ -188,9 +186,9 @@
 
         function calcLiveTotal() {
             const shelf = parseFloat(document.getElementById('in-buy').value) || 0;
-            const prem = 1 + (parseFloat(document.getElementById('in-premium').value || 0) / 100);
-            const fee = parseFloat(document.getElementById('in-fee').value || 0);
-            const tax = 1 + (parseFloat(document.getElementById('in-tax').value || 0) / 100);
+            const prem = 1 + (parseFloat(document.getElementById('in-premium').value || 16) / 100);
+            const fee = parseFloat(document.getElementById('in-fee').value || 1.5);
+            const tax = 1 + (parseFloat(document.getElementById('in-tax').value || 13) / 100);
             const total = ((shelf * prem) + fee) * tax;
             document.getElementById('live-calc-total').innerText = `$${total.toFixed(2)}`;
             return total;
@@ -206,11 +204,6 @@
             const src = fee === 1.0 ? 'AMZ' : 'ENC';
             data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: total, sell: 0, profit: 0, sold: false, archived: false, feeValue: fee, source: src });
             document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update(); toggleAddModal();
-        }
-
-        function editName(id) {
-            const i = data.find(x => x.id === id);
-            if (i) { const n = prompt("Edit Item Name:", i.name); if(n) { i.name = n; update(); } }
         }
 
         function ts(e) { startX = e.touches[0].clientX; }
@@ -285,7 +278,7 @@
                         ${actionHtml}
                         <div id="row-${item.id}" class="swipe-content p-4 border rounded-[1.5rem] flex justify-between items-center ${item.sold || item.archived ? 'bg-slate-50 border-slate-200 opacity-80' : 'border-slate-200 shadow-sm'}" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
                             <div class="flex-1 pr-4">
-                                <p onclick="editName(${item.id})" class="font-bold text-slate-800 item-name cursor-pointer">${item.name}</p>
+                                <p class="font-bold text-slate-800 item-name">${item.name}</p>
                                 <p class="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Bid: $${item.listedPrice.toFixed(2)} | Cost: $${item.totalPaid.toFixed(2)}${item.sold ? ` | <span class="text-blue-600">Sale: $${item.sell.toFixed(2)}</span>` : ''}</p>
                             </div>
                             <div class="text-right">
@@ -323,8 +316,18 @@
         function exportBackup() { const blob = new Blob([JSON.stringify({data, trash})], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); }
         
         // CSV IMPORT LOGIC
-        function openImportModal(input) { if (input.files[0]) { pendingImportFile = input.files[0]; document.getElementById('import-overlay').classList.remove('hidden'); } }
-        function closeImportModal() { document.getElementById('import-overlay').classList.add('hidden'); document.getElementById('home-batch-file').value = ''; }
+        function openImportModal(input) { 
+            if (input.files[0]) { 
+                pendingImportFile = input.files[0]; 
+                document.getElementById('display-filename').innerText = pendingImportFile.name;
+                document.getElementById('import-overlay').classList.remove('hidden'); 
+            } 
+        }
+        function closeImportModal() { 
+            document.getElementById('import-overlay').classList.add('hidden'); 
+            document.getElementById('home-batch-file').value = ''; 
+            document.getElementById('display-filename').innerText = "No file selected";
+        }
         
         function confirmImport() { 
             const date = document.getElementById('import-date-picker').value; 
