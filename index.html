@@ -79,15 +79,8 @@
                     <input id="in-buy" type="number" inputmode="decimal" placeholder="0.00" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-black text-2xl text-blue-600">
                 </div>
                 
-                <div class="bg-slate-100 p-2 rounded-2xl">
-                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Premium %</label>
-                    <input id="in-premium" type="number" value="16" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold">
-                </div>
-                
-                <div class="bg-slate-100 p-2 rounded-2xl">
-                    <label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label>
-                    <input id="in-tax" type="number" value="13" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold">
-                </div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Premium %</label><input id="in-premium" type="number" value="16" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
+                <div class="bg-slate-100 p-2 rounded-2xl"><label class="text-[9px] font-bold text-slate-400 uppercase ml-2">Tax %</label><input id="in-tax" type="number" value="13" oninput="calcLiveTotal()" class="w-full p-1 bg-transparent outline-none font-bold"></div>
 
                 <div class="col-span-2 bg-slate-100 p-3 rounded-2xl">
                     <div class="flex justify-between items-center mb-1">
@@ -111,21 +104,30 @@
                 <span id="live-calc-total" class="text-white font-black text-xl">$0.00</span>
             </div>
             
-            <div class="flex gap-3">
-                <button onclick="toggleAddModal()" class="flex-1 py-4 font-bold text-slate-400 uppercase text-xs">Close</button>
-                <button onclick="addItem()" class="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl uppercase shadow-lg shadow-blue-200">Add Item</button>
-            </div>
+            <div class="flex gap-3"><button onclick="toggleAddModal()" class="flex-1 py-4 font-bold text-slate-400 uppercase text-xs">Close</button><button onclick="addItem()" class="flex-1 bg-blue-600 text-white font-black py-4 rounded-2xl uppercase shadow-lg shadow-blue-200">Add Item</button></div>
         </div>
     </div>
 
     <div id="import-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl text-center">
-            <h3 class="font-black text-slate-800 uppercase mb-4">Import Date</h3>
-            <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold mb-6">
-            <p class="text-[10px] text-slate-400 uppercase font-bold mb-4">Items will use current Fee/Tax settings</p>
+        <div class="bg-white w-full max-w-xs rounded-[2rem] p-6 shadow-2xl">
+            <h3 class="font-black text-slate-800 uppercase mb-4 text-center">Batch Import</h3>
+            
+            <div class="mb-4">
+                <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 block mb-1">Select Source</label>
+                <div class="flex gap-2">
+                    <button onclick="setImportSource('ENC')" id="imp-btn-enc" class="flex-1 py-3 rounded-xl font-black text-xs fee-btn active">ENC ($1.50)</button>
+                    <button onclick="setImportSource('AMZ')" id="imp-btn-amz" class="flex-1 py-3 rounded-xl font-black text-xs fee-btn">AMZ ($1.00)</button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="text-[9px] font-bold text-slate-400 uppercase ml-2 block mb-1">Import Date</label>
+                <input id="import-date-picker" type="date" class="w-full p-4 bg-slate-100 rounded-2xl outline-none font-bold">
+            </div>
+
             <div class="flex gap-3">
                 <button onclick="closeImportModal()" class="flex-1 py-3 font-bold text-slate-400 uppercase text-[10px]">Cancel</button>
-                <button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Confirm Import</button>
+                <button onclick="confirmImport()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl uppercase text-[10px]">Import Items</button>
             </div>
         </div>
     </div>
@@ -161,27 +163,29 @@
         let activeSaleId = null;
         let startX = 0;
         let pendingImportFile = null;
+        let importSourceSelection = 'ENC';
 
         document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('import-date-picker').value = new Date().toISOString().split('T')[0];
 
-        function update() {
-            localStorage.setItem('tracker_db', JSON.stringify(data));
-            localStorage.setItem('tracker_trash', JSON.stringify(trash));
-            render();
-        }
+        function update() { localStorage.setItem('tracker_db', JSON.stringify(data)); localStorage.setItem('tracker_trash', JSON.stringify(trash)); render(); }
 
         function toggleAddModal() { document.getElementById('add-modal').classList.toggle('hidden'); calcLiveTotal(); }
-        
         function setQuickFee(val, type) {
             document.getElementById('in-fee').value = val.toFixed(2);
             document.getElementById('btn-enc').classList.toggle('active', type === 'enc');
             document.getElementById('btn-amz').classList.toggle('active', type === 'amz');
             calcLiveTotal();
         }
-        
         function clearFeeToggles() {
             document.getElementById('btn-enc').classList.remove('active');
             document.getElementById('btn-amz').classList.remove('active');
+        }
+
+        function setImportSource(src) {
+            importSourceSelection = src;
+            document.getElementById('imp-btn-enc').classList.toggle('active', src === 'ENC');
+            document.getElementById('imp-btn-amz').classList.toggle('active', src === 'AMZ');
         }
 
         function calcLiveTotal() {
@@ -201,11 +205,9 @@
             const total = calcLiveTotal();
             const date = document.getElementById('in-date').value;
             const fee = parseFloat(document.getElementById('in-fee').value);
-            data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: total, sell: 0, profit: 0, sold: false, archived: false, feeValue: fee });
-            document.getElementById('in-name').value = ''; 
-            document.getElementById('in-buy').value = ''; 
-            toggleAddModal(); 
-            update();
+            const src = fee === 1.0 ? 'AMZ' : 'ENC'; // Guess source based on fee for single items
+            data.push({ id: Date.now(), name, date, listedPrice: shelf, totalPaid: total, sell: 0, profit: 0, sold: false, archived: false, feeValue: fee, source: src });
+            document.getElementById('in-name').value = ''; document.getElementById('in-buy').value = ''; update(); toggleAddModal();
         }
 
         function editName(id) {
@@ -241,23 +243,31 @@
                 if (currentTab === 'inventory') return !i.sold && !i.archived;
                 if (currentTab === 'sold') return i.sold;
                 if (currentTab === 'archive') return i.archived;
+                return true;
             }).filter(i => i.name.toLowerCase().includes(document.getElementById('search-input').value.toLowerCase()));
 
-            const groups = filtered.reduce((acc, i) => { const d = i.date || "Legacy"; if(!acc[d]) acc[d] = []; acc[d].push(i); return acc; }, {});
+            // GROUP BY DATE + SOURCE to prevent overwriting/merging of different imports
+            const groups = filtered.reduce((acc, i) => { 
+                const d = i.date || "Legacy"; 
+                const s = i.source || "ENC";
+                const key = `${d}_${s}`;
+                if(!acc[key]) acc[key] = []; 
+                acc[key].push(i); 
+                return acc; 
+            }, {});
 
-            Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(date => {
-                const allItemsFromThisDate = data.filter(d => (d.date || "Legacy") === date);
-                let groupCost = 0, groupProfit = 0, encCount = 0, amzCount = 0;
+            Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(key => {
+                const [date, source] = key.split('_');
                 
-                allItemsFromThisDate.forEach(item => {
-                    groupCost += item.totalPaid;
-                    if (item.sold) groupProfit += item.profit;
-                    if (item.feeValue === 1.5) encCount++;
-                    else if (item.feeValue === 1) amzCount++;
+                // Calculate GLOBAL stats for this specific batch (Date + Source)
+                const allItemsInBatch = data.filter(d => (d.date || "Legacy") === date && (d.source || "ENC") === source);
+                let batchCost = 0, batchProfit = 0;
+                allItemsInBatch.forEach(item => {
+                    batchCost += item.totalPaid;
+                    if (item.sold) batchProfit += item.profit;
                 });
 
-                const groupType = encCount >= amzCount ? "ENC" : "AMZ";
-                const groupROI = groupCost > 0 ? ((groupProfit / groupCost) * 100).toFixed(0) : 0;
+                const batchROI = batchCost > 0 ? ((batchProfit / batchCost) * 100).toFixed(0) : 0;
 
                 const header = document.createElement('div');
                 header.className = "mb-4 mt-6 px-2";
@@ -265,20 +275,19 @@
                     <div class="flex flex-col items-center">
                         <span class="bg-slate-800 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-[0.2em] mb-2">${date}</span>
                         <div class="flex gap-3 text-[9px] font-bold text-slate-500 uppercase tracking-tight">
-                            <span><b class="text-blue-600">${groupType}</b></span>
-                            <span>Cost: <b class="text-slate-800">$${groupCost.toFixed(1)}</b></span>
-                            <span>Profit: <b class="${groupProfit >= 0 ? 'text-green-600' : 'text-red-600'}">$${groupProfit.toFixed(1)}</b></span>
-                            <span>ROI: <b class="text-slate-800">${groupROI}%</b></span>
+                            <span><b class="text-blue-600">${source}</b></span>
+                            <span>Cost: <b class="text-slate-800">$${batchCost.toFixed(1)}</b></span>
+                            <span>Profit: <b class="${batchProfit >= 0 ? 'text-green-600' : 'text-red-600'}">$${batchProfit.toFixed(1)}</b></span>
+                            <span>ROI: <b class="text-slate-800">${batchROI}%</b></span>
                         </div>
                     </div>`;
                 list.appendChild(header);
 
-                groups[date].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+                groups[key].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
                     const container = document.createElement('div');
                     container.className = "swipe-container";
                     const roiVal = item.sold ? ((item.profit / item.totalPaid) * 100) : 0;
                     let pClass = item.profit >= 0 ? (roiVal >= 100 ? "high-roi" : "text-green-600") : "text-red-600";
-
                     const actionHtml = currentTab === 'inventory' ? `<div class="swipe-actions"><button onclick="toggleArchive(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[9px] uppercase">Archive</button><button onclick="moveToTrash(${item.id})" class="flex-1 bg-red-600 text-white font-black text-[9px] uppercase">Delete</button></div>` : '';
 
                     container.innerHTML = `
@@ -290,7 +299,7 @@
                             </div>
                             <div class="text-right">
                                 ${item.sold ? `<button onclick="sellItem(${item.id})"><p class="font-black text-sm leading-none ${pClass}">${item.profit >= 0 ? '+' : ''}$${item.profit.toFixed(2)}</p><p class="text-[8px] font-bold uppercase opacity-50 mt-1">${roiVal.toFixed(0)}% ROI</p></button>` : 
-                                  item.archived ? `<div class="flex gap-2"><button onclick="toggleArchive(${item.id})" class="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button></div>` :
+                                  item.archived ? `<button onclick="toggleArchive(${item.id})" class="bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[9px] uppercase">Restore</button>` :
                                   `<button onclick="sellItem(${item.id})" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-md">Sell</button>`}
                             </div>
                         </div>`;
@@ -301,7 +310,7 @@
             trash.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "p-4 border border-slate-200 rounded-[1.5rem] flex justify-between items-center bg-slate-100 opacity-70";
-                card.innerHTML = `<div class="flex-1"><p class="font-bold text-slate-600 text-xs">${item.name}</p></div><div class="flex gap-2"><button onclick="restoreFromTrash(${item.id})" class="text-blue-600 font-bold text-[9px] uppercase">Restore</button></div>`;
+                card.innerHTML = `<div class="flex-1"><p class="font-bold text-slate-600 text-xs">${item.name}</p></div><button onclick="restoreFromTrash(${item.id})" class="text-blue-600 font-bold text-[9px] uppercase">Restore</button>`;
                 trashList.appendChild(card);
             });
 
@@ -328,9 +337,9 @@
         function confirmImport() { 
             const date = document.getElementById('import-date-picker').value; 
             const reader = new FileReader(); 
-            const fee = parseFloat(document.getElementById('in-fee').value);
-            const premiumVal = parseFloat(document.getElementById('in-premium').value || 0);
-            const taxVal = parseFloat(document.getElementById('in-tax').value || 0);
+            const fee = importSourceSelection === 'ENC' ? 1.50 : 1.00;
+            const premiumVal = parseFloat(document.getElementById('in-premium').value || 16);
+            const taxVal = parseFloat(document.getElementById('in-tax').value || 13);
 
             reader.onload = (e) => { 
                 e.target.result.split('\n').slice(1).forEach(row => { 
@@ -346,13 +355,11 @@
                             name: c[0].replace(/"/g,'').trim(), 
                             listedPrice: bid, 
                             totalPaid: total, 
-                            sell:0, profit:0, sold:false, archived:false, feeValue: fee 
+                            sell:0, profit:0, sold:false, archived:false, feeValue: fee, source: importSourceSelection 
                         }); 
                     }
                 }); 
-                update(); 
-                closeImportModal(); 
-                toggleAddModal(); 
+                update(); closeImportModal(); toggleAddModal(); 
             }; 
             reader.readAsText(pendingImportFile); 
         }
