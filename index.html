@@ -962,7 +962,51 @@
       function openImportModal(input) {
         if (input.files[0]) {
           csvFile = input.files[0];
-          document.getElementById("import-filename").innerText = csvFile.name;
+          const fileName = csvFile.name;
+          document.getElementById("import-filename").innerText = fileName;
+
+          // 1. Detect Source (AMZ vs ENC)
+          if (fileName.toUpperCase().includes("AMZ")) {
+            setImpSrc("AMZ");
+          } else if (fileName.toUpperCase().includes("ENC")) {
+            setImpSrc("ENC");
+          } else {
+            setImpSrc("ENC"); // Default
+          }
+
+          // 2. Detect Date (Pattern: Mon-DD-YY, e.g., Mar-01-26)
+          const dateMatch = fileName.match(
+            /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{1,2})-(\d{2})/i
+          );
+
+          if (dateMatch) {
+            const months = {
+              jan: "01",
+              feb: "02",
+              mar: "03",
+              apr: "04",
+              may: "05",
+              jun: "06",
+              jul: "07",
+              aug: "08",
+              sep: "09",
+              oct: "10",
+              nov: "11",
+              dec: "12",
+            };
+            const month = months[dateMatch[1].toLowerCase()];
+            const day = dateMatch[2].padStart(2, "0");
+            const year = "20" + dateMatch[3]; // Assumes 20xx century
+            document.getElementById(
+              "imp-date"
+            ).value = `${year}-${month}-${day}`;
+          } else {
+            // Default to current date if no pattern found
+            document.getElementById("imp-date").value = new Date()
+              .toISOString()
+              .split("T")[0];
+          }
+
           document.getElementById("import-modal").classList.remove("hidden");
         }
       }
