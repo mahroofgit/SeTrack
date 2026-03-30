@@ -962,18 +962,32 @@
         a.click();
       }
       function handleRestore(input) {
-        const r = new FileReader();
-        r.onload = (e) => {
-          try {
-            const b = JSON.parse(e.target.result);
-            db = b.db || [];
-            trash = b.trash || [];
-            save();
-          } catch (err) {
-            alert("Invalid file");
-          }
-        };
-        r.readAsText(input.files[0]);
+        if (!input.files[0]) return;
+
+        // Add the confirmation check here
+        const confirmOverwrite = confirm(
+          "This will DELETE all current items and replace them with the backup file. Are you sure?"
+        );
+
+        if (confirmOverwrite) {
+          const r = new FileReader();
+          r.onload = (e) => {
+            try {
+              const b = JSON.parse(e.target.result);
+              // Only overwrite if the file structure looks correct
+              db = b.db || [];
+              trash = b.trash || [];
+              save();
+              alert("Restore successful!");
+            } catch (err) {
+              alert("Error: Invalid backup file format.");
+            }
+          };
+          r.readAsText(input.files[0]);
+        } else {
+          // Clear the input so the same file can be selected again later
+          input.value = "";
+        }
       }
 
       function openImportModal(input) {
