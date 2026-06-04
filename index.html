@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -419,8 +419,18 @@
           id="sale-price"
           type="number"
           inputmode="decimal"
-          class="w-full text-center text-4xl font-black p-3 bg-slate-100 rounded-xl outline-none mb-5"
+          oninput="updateLiveProfit()"
+          class="w-full text-center text-4xl font-black p-3 bg-slate-100 rounded-xl outline-none mb-3"
         />
+
+        <div
+          id="live-profit-box"
+          class="text-center mb-4 font-black uppercase text-[10px] tracking-tight hidden"
+        >
+          <span class="text-slate-400">Est. Profit: </span>
+          <span id="live-profit-val" class="text-xs font-black">$-.--</span>
+        </div>
+
         <button
           id="unsold-opt"
           onclick="markUnsold()"
@@ -646,7 +656,7 @@
           parseFloat(document.getElementById("calc-tab-prem").value || 16) /
             100;
         const f = parseFloat(
-          document.getElementById("calc-tab-fee").value || 1.5
+          document.getElementById("calc-tab-fee").value || 1.5,
         );
         const t =
           1 +
@@ -690,8 +700,8 @@
             i.name
               .toLowerCase()
               .includes(
-                document.getElementById("search-input").value.toLowerCase()
-              )
+                document.getElementById("search-input").value.toLowerCase(),
+              ),
           );
 
         const groups = filtered.reduce((acc, i) => {
@@ -706,7 +716,7 @@
           .forEach((key) => {
             const [date, source] = key.split("_");
             const batch = db.filter(
-              (d) => d.date === date && d.source === source
+              (d) => d.date === date && d.source === source,
             );
             let bCost = 0,
               bProf = 0,
@@ -728,14 +738,14 @@
                     <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[8px] font-bold text-slate-400 uppercase tracking-tight">
                         <span><b class="text-blue-600">${source}</b></span>
                         <span>Cost: <b class="text-slate-800">$${bCost.toFixed(
-                          2
+                          2,
                         )}</b></span>
                         <span>Profit: <b class="${
                           bProf >= 0 ? "text-green-600" : "text-red-600"
                         }">$${bProf.toFixed(2)}</b></span>
                         <span>ROI: <b>${roi}%</b></span>
                         <span>BE: <b class="text-slate-800">$${be.toFixed(
-                          2
+                          2,
                         )}</b></span>
                     </div>`;
             list.appendChild(head);
@@ -759,23 +769,23 @@
                         <div id="row-${
                           item.id
                         }" class="swipe-content p-3 border border-slate-200 rounded-xl flex justify-between items-center ${
-                  item.sold || item.archived
-                    ? "bg-slate-50 opacity-80"
-                    : "shadow-sm"
-                }" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
+                          item.sold || item.archived
+                            ? "bg-slate-50 opacity-80"
+                            : "shadow-sm"
+                        }" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
                             <div class="flex-1 pr-3 overflow-hidden">
                                 <p class="item-name text-slate-800" onclick="editName(${
                                   item.id
                                 })">${item.name}</p>
                                 <p class="text-[7px] font-bold text-slate-400 uppercase mt-0.5">Bid: $${item.bid.toFixed(
-                                  2
+                                  2,
                                 )} | Paid: $${item.totalPaid.toFixed(2)} ${
-                  item.sold
-                    ? `<span class="text-blue-600"> | Sold: $${item.sell.toFixed(
-                        2
-                      )}</span>`
-                    : ""
-                }</p>
+                                  item.sold
+                                    ? `<span class="text-blue-600"> | Sold: $${item.sell.toFixed(
+                                        2,
+                                      )}</span>`
+                                    : ""
+                                }</p>
                             </div>
                             <div class="text-right shrink-0">
                                 ${
@@ -787,14 +797,14 @@
                                       isHigh
                                         ? "high-roi"
                                         : item.profit >= 0
-                                        ? "text-green-600"
-                                        : "text-red-600"
+                                          ? "text-green-600"
+                                          : "text-red-600"
                                     }">$${item.profit.toFixed(2)}</p>
                                     <p class="text-[6px] font-black opacity-60 uppercase">${itemRoi}% ROI</p>
                                 </button>`
                                     : item.archived
-                                    ? `<button onclick="toggleArch(${item.id})" class="text-blue-600 font-black text-[8px] border px-2 py-1 rounded-lg">RESTORE</button>`
-                                    : `<button onclick="sell(${item.id})" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-black text-[8px] uppercase">Sell</button>`
+                                      ? `<button onclick="toggleArch(${item.id})" class="text-blue-600 font-black text-[8px] border px-2 py-1 rounded-lg">RESTORE</button>`
+                                      : `<button onclick="sell(${item.id})" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-black text-[8px] uppercase">Sell</button>`
                                 }
                             </div>
                         </div>`;
@@ -810,7 +820,7 @@
             i.name
           }</p>
                     <p class="text-[6px] font-bold text-slate-400 uppercase">Paid: $${i.totalPaid.toFixed(
-                      2
+                      2,
                     )} | ${i.date}</p></div>
                     <div class="flex gap-2"><button onclick="revive(${
                       i.id
@@ -822,7 +832,7 @@
         });
 
         document.getElementById("total-profit").innerText = `$${pTot.toFixed(
-          2
+          2,
         )}`;
         document.getElementById("total-cost").innerText = `$${cTot.toFixed(2)}`;
         document.getElementById("trash-count").innerText = trash.length;
@@ -911,6 +921,35 @@
         document.getElementById("sale-modal").classList.add("hidden");
       }
 
+      function updateLiveProfit() {
+        const val = parseFloat(document.getElementById("sale-price").value);
+        const item = db.find((x) => x.id === actId);
+        const box = document.getElementById("live-profit-box");
+        const display = document.getElementById("live-profit-val");
+
+        // If the user hasn't typed anything yet or cleared the input, don't show the box
+        if (isNaN(val) || !item) {
+          box.classList.add("hidden");
+          return;
+        }
+
+        // Calculate against totalPaid directly (works for new items and edits alike)
+        const calculatedProfit = val - item.totalPaid;
+        const roi =
+          item.totalPaid > 0
+            ? ((calculatedProfit / item.totalPaid) * 100).toFixed(0)
+            : 0;
+
+        if (calculatedProfit >= 0) {
+          display.className = "text-xs font-black text-green-600";
+        } else {
+          display.className = "text-xs font-black text-red-600";
+        }
+
+        display.innerText = `$${calculatedProfit.toFixed(2)} (${roi}% ROI)`;
+        box.classList.remove("hidden");
+      }
+
       function addItem() {
         const n = document.getElementById("in-name").value;
         const b = parseFloat(document.getElementById("in-buy").value);
@@ -966,7 +1005,7 @@
 
         // Add the confirmation check here
         const confirmOverwrite = confirm(
-          "This will DELETE all current items and replace them with the backup file. Are you sure?"
+          "This will DELETE all current items and replace them with the backup file. Are you sure?",
         );
 
         if (confirmOverwrite) {
@@ -1007,7 +1046,7 @@
 
           // 2. Detect Date (Pattern: Mon-DD-YY, e.g., Mar-01-26)
           const dateMatch = fileName.match(
-            /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{1,2})-(\d{2})/i
+            /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{1,2})-(\d{2})/i,
           );
 
           if (dateMatch) {
@@ -1028,9 +1067,8 @@
             const month = months[dateMatch[1].toLowerCase()];
             const day = dateMatch[2].padStart(2, "0");
             const year = "20" + dateMatch[3]; // Assumes 20xx century
-            document.getElementById(
-              "imp-date"
-            ).value = `${year}-${month}-${day}`;
+            document.getElementById("imp-date").value =
+              `${year}-${month}-${day}`;
           } else {
             // Default to current date if no pattern found
             document.getElementById("imp-date").value = new Date()
