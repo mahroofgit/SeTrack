@@ -47,6 +47,12 @@
         display: flex;
         width: 110px;
         z-index: 1;
+        /* Hidden until the row is swiped, so the buttons don't peek
+           out behind the card's rounded corners. */
+        visibility: hidden;
+      }
+      .swipe-container.open .swipe-actions {
+        visibility: visible;
       }
       .swipe-content {
         position: relative;
@@ -874,8 +880,17 @@
         if (curTab !== "inventory") return;
         let d = startX - e.changedTouches[0].clientX;
         const r = document.getElementById(`row-${id}`);
-        if (d > 45) r.classList.add("swiped");
-        else if (d < -45) r.classList.remove("swiped");
+        if (d > 45) {
+          r.classList.add("swiped");
+          r.parentElement.classList.add("open");
+        } else if (d < -45) {
+          r.classList.remove("swiped");
+          // Hide the buttons once the slide-back animation finishes
+          setTimeout(() => {
+            if (!r.classList.contains("swiped"))
+              r.parentElement.classList.remove("open");
+          }, 200);
+        }
       }
 
       function toggleArch(id) {
