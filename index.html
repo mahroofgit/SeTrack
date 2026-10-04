@@ -164,22 +164,34 @@
         </div>
       </header>
 
-      <div
-        class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl mb-3 flex justify-between items-end"
-      >
-        <div>
-          <p class="text-[8px] opacity-60 font-bold uppercase tracking-widest">
-            Net Profit
-          </p>
-          <h2 id="total-profit" class="text-2xl font-black tracking-tighter">
-            $0.00
-          </h2>
-        </div>
-        <div class="text-right">
-          <p class="text-[8px] opacity-60 font-bold uppercase tracking-widest">
-            Inv Cost
-          </p>
-          <p id="total-cost" class="text-lg font-bold opacity-90">$0.00</p>
+      <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl mb-3">
+        <p class="text-[8px] opacity-60 font-bold uppercase tracking-widest">
+          Net Profit
+        </p>
+        <h2 id="total-profit" class="text-2xl font-black tracking-tighter">
+          $0.00
+        </h2>
+        <div
+          class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10"
+        >
+          <div>
+            <p class="text-[7px] opacity-60 font-bold uppercase tracking-widest">
+              Revenue
+            </p>
+            <p id="total-revenue" class="text-sm font-bold opacity-90">$0.00</p>
+          </div>
+          <div class="text-center">
+            <p class="text-[7px] opacity-60 font-bold uppercase tracking-widest">
+              Unsold
+            </p>
+            <p id="total-unsold" class="text-sm font-bold opacity-90">$0.00</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[7px] opacity-60 font-bold uppercase tracking-widest">
+              Inv Cost
+            </p>
+            <p id="total-cost" class="text-sm font-bold opacity-90">$0.00</p>
+          </div>
         </div>
       </div>
 
@@ -689,9 +701,16 @@
         list.innerHTML = "";
         trList.innerHTML = "";
         let pTot = 0,
-          cTot = 0;
+          cTot = 0,
+          revTot = 0, // total sale price of all sold items
+          unsoldTot = 0; // cost of items on the Inv tab (unsold, not archived)
         db.forEach((i) => {
-          if (i.sold) pTot += i.profit;
+          if (i.sold) {
+            pTot += i.profit;
+            revTot += i.sell;
+          } else if (!i.archived) {
+            unsoldTot += i.totalPaid;
+          }
           cTot += i.totalPaid;
         });
 
@@ -841,6 +860,10 @@
           2,
         )}`;
         document.getElementById("total-cost").innerText = `$${cTot.toFixed(2)}`;
+        document.getElementById("total-revenue").innerText =
+          `$${revTot.toFixed(2)}`;
+        document.getElementById("total-unsold").innerText =
+          `$${unsoldTot.toFixed(2)}`;
         document.getElementById("trash-count").innerText = trash.length;
       }
 
