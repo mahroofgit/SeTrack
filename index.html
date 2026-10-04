@@ -588,13 +588,17 @@
       let startX = 0;
       let csvFile = null;
       let impSrc = "ENC";
+      let calcSrc = "ENC";
 
-      document.getElementById("in-date").value = new Date()
-        .toISOString()
-        .split("T")[0];
-      document.getElementById("imp-date").value = new Date()
-        .toISOString()
-        .split("T")[0];
+      // Today's date in the device's local time zone (YYYY-MM-DD).
+      // toISOString() uses UTC, which gave tomorrow's date in the evening.
+      function localToday() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+
+      document.getElementById("in-date").value = localToday();
+      document.getElementById("imp-date").value = localToday();
 
       function save() {
         localStorage.setItem("sep_db", JSON.stringify(db));
@@ -638,6 +642,7 @@
       }
 
       function setCalcQuickFee(v, t) {
+        calcSrc = t;
         document.getElementById("calc-tab-fee").value = v.toFixed(2);
         document
           .getElementById("calc-btn-enc")
@@ -661,10 +666,11 @@
         const t =
           1 +
           parseFloat(document.getElementById("calc-tab-tax").value || 13) / 100;
-        document.getElementById("calc-tab-total").innerText = `$${(
-          (b * p + f) *
-          t
-        ).toFixed(2)}`;
+        // AMZ: tax only on (bid + premium), fee added after tax.
+        // ENC: tax on (bid + premium + fee).
+        const total = calcSrc === "AMZ" ? b * p * t + f : (b * p + f) * t;
+        document.getElementById("calc-tab-total").innerText =
+          `$${total.toFixed(2)}`;
       }
 
       function editName(id) {
@@ -988,7 +994,7 @@
       function exportBackup() {
         const now = new Date();
         const ts =
-          now.toISOString().split("T")[0] +
+          localToday() +
           "_" +
           now.getHours().toString().padStart(2, "0") +
           now.getMinutes().toString().padStart(2, "0");
@@ -1071,9 +1077,7 @@
               `${year}-${month}-${day}`;
           } else {
             // Default to current date if no pattern found
-            document.getElementById("imp-date").value = new Date()
-              .toISOString()
-              .split("T")[0];
+            document.getElementById("imp-date").value = localToday();
           }
 
           document.getElementById("import-modal").classList.remove("hidden");
