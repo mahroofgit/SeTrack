@@ -6,7 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>SeTrack Pro</title>
+    <title>BidLedger</title>
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-title" content="BidLedger" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body {
@@ -105,7 +110,7 @@
     <div class="max-w-md mx-auto p-3">
       <header class="flex justify-between items-center mb-3 px-1">
         <h1 class="text-lg font-black tracking-tighter text-slate-800">
-          SeTrack
+          BidLedger
         </h1>
         <div class="flex gap-1.5 items-center">
           <button
@@ -1041,7 +1046,7 @@
         });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `SeTrack_backup_${ts}.json`;
+        a.download = `BidLedger_backup_${ts}.json`;
         a.click();
       }
       function handleRestore(input) {
