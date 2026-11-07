@@ -989,11 +989,16 @@
             ? ((calculatedProfit / item.totalPaid) * 100).toFixed(0)
             : 0;
 
-        if (calculatedProfit >= 0) {
-          display.className = "text-xs font-black text-green-600";
-        } else {
-          display.className = "text-xs font-black text-red-600";
-        }
+        // Same colours as the Sold tab: dark green for 100%+ ROI,
+        // green for any profit, red for a loss.
+        const isHigh = calculatedProfit / item.totalPaid >= 1;
+        display.className = `text-xs font-black ${
+          isHigh
+            ? "high-roi"
+            : calculatedProfit >= 0
+              ? "text-green-600"
+              : "text-red-600"
+        }`;
 
         display.innerText = `$${calculatedProfit.toFixed(2)} (${roi}% ROI)`;
         box.classList.remove("hidden");
