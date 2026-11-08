@@ -69,6 +69,14 @@
       .swiped {
         transform: translateX(-110px);
       }
+      /* Rows on the Inv tab: the browser handles up/down scrolling,
+         sideways movement is left to the swipe code. */
+      .swipe-container.swipeable .swipe-content {
+        touch-action: pan-y;
+      }
+      .swipe-content.dragging {
+        transition: none;
+      }
       .fee-btn {
         transition: all 0.1s;
         border: 1px solid #e2e8f0;
@@ -608,7 +616,6 @@
       let trash = JSON.parse(localStorage.getItem("sep_trash")) || [];
       let curTab = "inventory";
       let actId = null;
-      let startX = 0;
       let csvFile = null;
       let impSrc = "ENC";
       let calcSrc = "ENC";
@@ -790,7 +797,10 @@
               .sort((a, b) => a.name.localeCompare(b.name))
               .forEach((item) => {
                 const row = document.createElement("div");
-                row.className = "swipe-container";
+                row.className =
+                  curTab === "inventory"
+                    ? "swipe-container swipeable"
+                    : "swipe-container";
                 const itemRoi =
                   item.totalPaid > 0
                     ? ((item.profit / item.totalPaid) * 100).toFixed(0)
@@ -808,7 +818,7 @@
                           item.sold || item.archived
                             ? "bg-slate-50 opacity-80"
                             : "shadow-sm"
-                        }" ontouchstart="ts(event)" ontouchend="te(event, ${item.id})">
+                        }">
                             <div class="flex-1 pr-3 overflow-hidden">
                                 <p class="item-name text-slate-800" onclick="editName(${
                                   item.id
@@ -879,19 +889,22 @@
       }
 
       // ---- Swipe to reveal Arch / Del ----
-      // A row only opens on a clearly sideways swipe made while the page
-      // isn't scrolling. Only one row can be open at a time, and any
-      // scroll closes it.
-      let startY = 0,
-        startScroll = 0,
-        lastScrollAt = 0;
+      // Works like most phone apps: the row follows your finger, the
+      // gesture locks to sideways or up/down after the first few pixels,
+      // and on release the row snaps open or closed. Only one row is open
+      // at a time, and scrolling closes it.
+      const SWIPE_W = 110; // width of the Arch/Del buttons
+      let sw = null; // current gesture
+      let swipeJustEnded = 0;
 
       function closeRow(r) {
         if (!r || !r.classList.contains("swiped")) return;
+        r.classList.remove("dragging");
+        r.style.transform = "";
         r.classList.remove("swiped");
         // Hide the buttons once the slide-back animation finishes
         setTimeout(() => {
-          if (!r.classList.contains("swiped"))
+          if (!r.classList.contains("swiped") && !r.style.transform)
             r.parentElement.classList.remove("open");
         }, 200);
       }
@@ -901,43 +914,100 @@
           .forEach((r) => r !== except && closeRow(r));
       }
 
-      function ts(e) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        startScroll = window.scrollY;
-      }
-      function te(e, id) {
-        if (curTab !== "inventory") return;
-        const dx = startX - e.changedTouches[0].clientX;
-        const dy = Math.abs(startY - e.changedTouches[0].clientY);
-        const r = document.getElementById(`row-${id}`);
-
-        // Ignore the gesture if the page moved (scroll or momentum scroll)
-        const scrolled =
-          Math.abs(window.scrollY - startScroll) > 2 ||
-          Date.now() - lastScrollAt < 250;
-        // Must be mostly horizontal: sideways at least twice the up/down move
-        const sideways = Math.abs(dx) > 50 && Math.abs(dx) > dy * 2;
-        if (scrolled || !sideways) return;
-
-        if (dx > 0) {
-          closeAllRows(r);
-          r.classList.add("swiped");
-          r.parentElement.classList.add("open");
-        } else {
-          closeRow(r);
-        }
-      }
-
-      // Scrolling closes any open row
-      window.addEventListener(
-        "scroll",
-        () => {
-          lastScrollAt = Date.now();
-          closeAllRows();
+      document.addEventListener(
+        "touchstart",
+        (e) => {
+          const row = e.target.closest(".swipeable .swipe-content");
+          // Touching anywhere else closes an open row
+          if (!row) {
+            if (!e.target.closest(".swipe-actions")) closeAllRows();
+            sw = null;
+            return;
+          }
+          const t = e.touches[0];
+          sw = {
+            row,
+            x: t.clientX,
+            y: t.clientY,
+            base: row.classList.contains("swiped") ? -SWIPE_W : 0,
+            dir: null, // "h" or "v" once decided
+            dx: 0,
+            t: Date.now(),
+          };
         },
         { passive: true },
       );
+
+      document.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!sw) return;
+          const t = e.touches[0];
+          const dx = t.clientX - sw.x;
+          const dy = t.clientY - sw.y;
+          if (!sw.dir) {
+            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; // not sure yet
+            // Lock direction: anything more sideways than vertical is a swipe
+            sw.dir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+            if (sw.dir === "h") {
+              closeAllRows(sw.row);
+              sw.row.classList.add("dragging");
+              sw.row.parentElement.classList.add("open");
+            }
+          }
+          if (sw.dir !== "h") return;
+          e.preventDefault(); // keep the page still while swiping
+          sw.dx = dx;
+          let x = sw.base + dx;
+          // Resist dragging past fully open or past closed
+          if (x < -SWIPE_W) x = -SWIPE_W + (x + SWIPE_W) * 0.3;
+          if (x > 0) x = x * 0.3;
+          sw.row.style.transform = `translateX(${x}px)`;
+        },
+        { passive: false },
+      );
+
+      function endSwipe() {
+        if (!sw) return;
+        const g = sw;
+        sw = null;
+        if (g.dir !== "h") return;
+        swipeJustEnded = Date.now();
+        const r = g.row;
+        r.classList.remove("dragging");
+        r.style.transform = "";
+        const pos = g.base + g.dx;
+        // A quick flick opens/closes even if it didn't travel halfway
+        const fast =
+          Math.abs(g.dx) > 25 &&
+          Math.abs(g.dx) / Math.max(Date.now() - g.t, 1) > 0.25;
+        const open = fast ? g.dx < 0 : pos < -SWIPE_W / 2;
+        if (open) {
+          r.classList.add("swiped");
+        } else {
+          r.classList.add("swiped"); // so closeRow animates it back
+          closeRow(r);
+        }
+      }
+      document.addEventListener("touchend", endSwipe, { passive: true });
+      document.addEventListener("touchcancel", endSwipe, { passive: true });
+
+      // A swipe shouldn't also count as a tap (e.g. opening the name editor)
+      document.addEventListener(
+        "click",
+        (e) => {
+          if (Date.now() - swipeJustEnded < 350) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+        },
+        true,
+      );
+
+      // Scrolling closes any open row
+      window.addEventListener("scroll", () => closeAllRows(), {
+        passive: true,
+      });
 
       function toggleArch(id) {
         const i = db.find((x) => x.id === id);
