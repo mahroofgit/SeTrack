@@ -878,25 +878,66 @@
         document.getElementById("trash-count").innerText = trash.length;
       }
 
+      // ---- Swipe to reveal Arch / Del ----
+      // A row only opens on a clearly sideways swipe made while the page
+      // isn't scrolling. Only one row can be open at a time, and any
+      // scroll closes it.
+      let startY = 0,
+        startScroll = 0,
+        lastScrollAt = 0;
+
+      function closeRow(r) {
+        if (!r || !r.classList.contains("swiped")) return;
+        r.classList.remove("swiped");
+        // Hide the buttons once the slide-back animation finishes
+        setTimeout(() => {
+          if (!r.classList.contains("swiped"))
+            r.parentElement.classList.remove("open");
+        }, 200);
+      }
+      function closeAllRows(except) {
+        document
+          .querySelectorAll(".swipe-content.swiped")
+          .forEach((r) => r !== except && closeRow(r));
+      }
+
       function ts(e) {
         startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startScroll = window.scrollY;
       }
       function te(e, id) {
         if (curTab !== "inventory") return;
-        let d = startX - e.changedTouches[0].clientX;
+        const dx = startX - e.changedTouches[0].clientX;
+        const dy = Math.abs(startY - e.changedTouches[0].clientY);
         const r = document.getElementById(`row-${id}`);
-        if (d > 45) {
+
+        // Ignore the gesture if the page moved (scroll or momentum scroll)
+        const scrolled =
+          Math.abs(window.scrollY - startScroll) > 2 ||
+          Date.now() - lastScrollAt < 250;
+        // Must be mostly horizontal: sideways at least twice the up/down move
+        const sideways = Math.abs(dx) > 50 && Math.abs(dx) > dy * 2;
+        if (scrolled || !sideways) return;
+
+        if (dx > 0) {
+          closeAllRows(r);
           r.classList.add("swiped");
           r.parentElement.classList.add("open");
-        } else if (d < -45) {
-          r.classList.remove("swiped");
-          // Hide the buttons once the slide-back animation finishes
-          setTimeout(() => {
-            if (!r.classList.contains("swiped"))
-              r.parentElement.classList.remove("open");
-          }, 200);
+        } else {
+          closeRow(r);
         }
       }
+
+      // Scrolling closes any open row
+      window.addEventListener(
+        "scroll",
+        () => {
+          lastScrollAt = Date.now();
+          closeAllRows();
+        },
+        { passive: true },
+      );
 
       function toggleArch(id) {
         const i = db.find((x) => x.id === id);
