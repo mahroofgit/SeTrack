@@ -313,7 +313,7 @@
           </h2>
           <p
             id="calc-result-sub"
-            class="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 min-h-[12px]"
+            class="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 min-h-[24px] leading-relaxed"
           ></p>
         </div>
         <div class="grid grid-cols-2 gap-2 mb-3 shrink-0">
@@ -932,7 +932,8 @@
         // Undo the cost formula to get the bid
         const raw =
           calcSrc === "AMZ" ? (maxCost - f) / (p * t) : (maxCost / t - f) / p;
-        const bid = Math.floor(raw * 100) / 100; // round down to the cent
+        // Round down to the highest bid the auction will accept
+        const bid = floorToValidBid(raw, calcSrc);
 
         if (!sell) {
           out.className = "text-4xl font-black text-slate-300 tracking-tighter";
@@ -950,9 +951,53 @@
         const profit = sell - cost;
         out.className = "text-4xl font-black text-green-600 tracking-tighter";
         out.innerText = `$${bid.toFixed(2)}`;
-        sub.innerText = `Cost $${cost.toFixed(2)} · Profit $${profit.toFixed(
+        const roi = (profit / cost) * 100;
+        // What one more bid step would give, so you know the cost of going up
+        const next = nextBid(bid, calcSrc);
+        const nCost = costOf(next);
+        const nProfit = sell - nCost;
+        sub.innerHTML = `Cost $${cost.toFixed(2)} · Profit $${profit.toFixed(
           2,
-        )} · ROI ${((profit / cost) * 100).toFixed(0)}%`;
+        )} · ROI ${roi.toFixed(0)}%<br><span class="text-amber-600">Next bid $${next.toFixed(
+          2,
+        )} → ${nProfit >= 0 ? "" : "-"}$${Math.abs(nProfit).toFixed(2)} · ${(
+          (nProfit / nCost) *
+          100
+        ).toFixed(0)}% ROI</span>`;
+      }
+
+      // Bid increment schedules: [up to this bid, increment]. The next
+      // allowed bid is the current bid plus the increment for its range.
+      const BID_STEPS = {
+        ENC: [
+          [29, 1],
+          [97.5, 2.5],
+          [990, 10],
+          [Infinity, 25],
+        ],
+        AMZ: [
+          [9, 1],
+          [18, 2],
+          [95, 5],
+          [975, 5],
+          [9750, 25],
+          [97500, 2500],
+          [Infinity, 10000],
+        ],
+      };
+      function nextBid(b, src) {
+        const steps = BID_STEPS[src] || BID_STEPS.ENC;
+        const inc = steps.find(([upTo]) => b <= upTo + 1e-9)[1];
+        return Math.round((b + inc) * 100) / 100;
+      }
+      // Highest allowed bid that is <= amount (0 if not even the first bid)
+      function floorToValidBid(amount, src) {
+        let b = 0;
+        while (true) {
+          const n = nextBid(b, src);
+          if (n > amount + 1e-9) return b;
+          b = n;
+        }
       }
 
       function editName(id) {
