@@ -1,0 +1,27 @@
+# Rebuilds styles.css whenever index.html changes, so new Tailwind classes
+# always have styles even if the page is edited directly on GitHub.
+name: Build CSS
+on:
+  push:
+    branches: [main]
+    paths: ["index.html", "tailwind.config.js", "styles/input.css"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npx -y tailwindcss@3 -i styles/input.css -o styles.css --minify
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- styles.css; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add styles.css
+          git commit -m "Rebuild styles.css"
+          git push
