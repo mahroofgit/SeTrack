@@ -457,6 +457,117 @@
     </div>
 
     <div
+      id="edit-modal"
+      class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[160] hidden flex items-center justify-center p-6"
+    >
+      <div
+        class="bg-white w-full max-w-xs rounded-2xl p-5 shadow-2xl max-h-[90dvh] overflow-y-auto"
+      >
+        <h3
+          class="text-center font-black text-slate-400 uppercase mb-3 text-[10px] tracking-widest"
+        >
+          Edit Item
+        </h3>
+        <textarea
+          id="ed-name"
+          rows="2"
+          placeholder="Item Name"
+          class="w-full mb-3 p-3 bg-slate-100 rounded-lg text-sm font-bold outline-none resize-none"
+        ></textarea>
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="bg-slate-100 p-2 rounded-lg">
+            <label class="text-[8px] font-bold text-slate-400 uppercase"
+              >Bid ($)</label
+            ><input
+              id="ed-bid"
+              type="number"
+              inputmode="decimal"
+              oninput="editCostChanged()"
+              class="w-full bg-transparent font-black text-lg outline-none"
+            />
+          </div>
+          <div class="bg-slate-100 p-2 rounded-lg">
+            <label class="text-[8px] font-bold text-slate-400 uppercase"
+              >Fee ($)</label
+            ><input
+              id="ed-fee"
+              type="number"
+              inputmode="decimal"
+              oninput="editCostChanged()"
+              class="w-full bg-transparent font-bold text-lg outline-none"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              onclick="setEditSrc('ENC')"
+              id="ed-btn-enc"
+              class="fee-btn flex-1"
+            >
+              ENC</button
+            ><button
+              onclick="setEditSrc('AMZ')"
+              id="ed-btn-amz"
+              class="fee-btn flex-1"
+            >
+              AMZ
+            </button>
+          </div>
+          <div class="bg-slate-100 p-2 rounded-lg">
+            <label class="text-[8px] font-bold text-slate-400 uppercase"
+              >Bought</label
+            ><input
+              id="ed-date"
+              type="date"
+              class="w-full bg-transparent font-bold text-xs outline-none"
+            />
+          </div>
+        </div>
+
+        <div id="ed-sold-box" class="hidden grid grid-cols-2 gap-3 mb-3">
+          <div class="bg-blue-50 p-2 rounded-lg">
+            <label class="text-[8px] font-bold text-blue-600 uppercase"
+              >Sold for ($)</label
+            ><input
+              id="ed-sell"
+              type="number"
+              inputmode="decimal"
+              oninput="editSummary()"
+              class="w-full bg-transparent font-black text-lg outline-none"
+            />
+          </div>
+          <div class="bg-blue-50 p-2 rounded-lg">
+            <label class="text-[8px] font-bold text-blue-600 uppercase"
+              >Sold on</label
+            ><input
+              id="ed-sold-date"
+              type="date"
+              class="w-full bg-transparent font-bold text-xs outline-none"
+            />
+          </div>
+        </div>
+
+        <p
+          id="ed-summary"
+          class="text-center text-[9px] font-black uppercase tracking-tight text-slate-400 mb-4"
+        ></p>
+
+        <div class="flex gap-3">
+          <button
+            onclick="closeEdit()"
+            class="flex-1 py-3 text-slate-400 font-bold uppercase text-[10px]"
+          >
+            Cancel</button
+          ><button
+            onclick="saveEdit()"
+            class="flex-1 bg-blue-600 text-white font-black py-3 rounded-xl uppercase text-[10px]"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
       id="add-modal"
       class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[150] hidden flex items-center justify-center p-6"
     >
@@ -1000,13 +1111,116 @@
         }
       }
 
-      function editName(id) {
-        const item = db.find((x) => x.id === id);
-        const newName = prompt("Edit Item Name:", item.name);
-        if (newName !== null && newName.trim() !== "") {
-          item.name = newName.trim();
-          save();
+      // ---- Full edit ----
+      let edId = null,
+        edSrc = "ENC",
+        edCostTouched = false; // only recalc Paid if bid/fee/source change
+
+      function costFor(bid, fee, src) {
+        // AMZ: tax only on (bid + premium), fee added after tax.
+        // ENC: tax on (bid + premium + fee).
+        return src === "AMZ"
+          ? bid * 1.16 * 1.13 + fee
+          : (bid * 1.16 + fee) * 1.13;
+      }
+      // Work out the fee that was used, from the saved total
+      function inferFee(item) {
+        const src = item.source || "ENC";
+        const f =
+          src === "AMZ"
+            ? item.totalPaid - item.bid * 1.16 * 1.13
+            : item.totalPaid / 1.13 - item.bid * 1.16;
+        if (!isFinite(f) || f < 0 || f > 50) return src === "AMZ" ? 1 : 1.5;
+        return Math.round(f * 100) / 100;
+      }
+
+      function openEdit(id) {
+        const i = db.find((x) => x.id === id);
+        if (!i) return;
+        edId = id;
+        edSrc = i.source || "ENC";
+        edCostTouched = false;
+        document.getElementById("ed-name").value = i.name;
+        document.getElementById("ed-bid").value = i.bid;
+        document.getElementById("ed-fee").value = inferFee(i).toFixed(2);
+        document.getElementById("ed-date").value = i.date || "";
+        document.getElementById("ed-sold-box").classList.toggle("hidden", !i.sold);
+        document.getElementById("ed-sell").value = i.sold ? i.sell : "";
+        document.getElementById("ed-sold-date").value = i.soldDate || "";
+        setEditSrc(edSrc, true);
+        document.getElementById("edit-modal").classList.remove("hidden");
+      }
+      function closeEdit() {
+        document.getElementById("edit-modal").classList.add("hidden");
+        edId = null;
+      }
+      function setEditSrc(src, initial) {
+        if (!initial && src !== edSrc) {
+          // Switching source: use that source's standard fee
+          document.getElementById("ed-fee").value = (src === "AMZ" ? 1 : 1.5).toFixed(2);
+          edCostTouched = true;
         }
+        edSrc = src;
+        document.getElementById("ed-btn-enc").classList.toggle("active", src === "ENC");
+        document.getElementById("ed-btn-amz").classList.toggle("active", src === "AMZ");
+        editSummary();
+      }
+      function editCostChanged() {
+        edCostTouched = true;
+        editSummary();
+      }
+      function editPaid() {
+        const i = db.find((x) => x.id === edId);
+        if (!edCostTouched) return i.totalPaid;
+        const b = parseFloat(document.getElementById("ed-bid").value) || 0;
+        const f = parseFloat(document.getElementById("ed-fee").value) || 0;
+        return costFor(b, f, edSrc);
+      }
+      function editSummary() {
+        const i = db.find((x) => x.id === edId);
+        if (!i) return;
+        const paid = editPaid();
+        const el = document.getElementById("ed-summary");
+        if (!i.sold) {
+          el.innerHTML = `Paid <b class="text-slate-800">$${paid.toFixed(2)}</b>`;
+          return;
+        }
+        const sell = parseFloat(document.getElementById("ed-sell").value) || 0;
+        const profit = sell - paid;
+        const roi = paid > 0 ? (profit / paid) * 100 : 0;
+        el.innerHTML = `Paid <b class="text-slate-800">$${paid.toFixed(2)}</b> · Profit <b class="${
+          roi >= 100 ? "high-roi" : profit >= 0 ? "text-green-600" : "text-red-600"
+        }">$${profit.toFixed(2)} (${roi.toFixed(0)}%)</b>`;
+      }
+      function saveEdit() {
+        const i = db.find((x) => x.id === edId);
+        if (!i) return closeEdit();
+        const name = document.getElementById("ed-name").value.trim();
+        const bid = parseFloat(document.getElementById("ed-bid").value);
+        if (!name || isNaN(bid)) {
+          alert("Name and bid are required.");
+          return;
+        }
+        const paid = editPaid();
+        i.name = name;
+        i.bid = bid;
+        i.source = edSrc;
+        i.totalPaid = paid;
+        i.date = document.getElementById("ed-date").value || i.date;
+        if (i.sold) {
+          const sell = parseFloat(document.getElementById("ed-sell").value);
+          if (!isNaN(sell)) i.sell = sell;
+          i.profit = i.sell - paid;
+          const sd = document.getElementById("ed-sold-date").value;
+          if (sd) i.soldDate = sd;
+          else delete i.soldDate;
+        }
+        save();
+        closeEdit();
+      }
+      // Older name for the same action
+      function editName(id) {
+        openEdit(id);
       }
 
       function render() {
@@ -1124,7 +1338,9 @@
                   ? daysBetween(item.date, item.soldDate)
                   : null;
                 const soldInfo =
-                  item.sold && item.soldDate
+                  item.sold && !item.soldDate
+                    ? `<p class="text-[7px] font-bold text-amber-600 uppercase mt-0.5" onclick="openEdit(${item.id})">No sale date · tap name to add</p>`
+                    : item.sold && item.soldDate
                     ? `<p class="text-[7px] font-bold text-slate-400 uppercase mt-0.5">Sold ${fmtDay(
                         item.soldDate,
                       )}${
@@ -1147,7 +1363,7 @@
                             : "shadow-sm"
                         }">
                             <div class="flex-1 pr-3 overflow-hidden">
-                                <p class="item-name text-slate-800" onclick="editName(${
+                                <p class="item-name text-slate-800" onclick="openEdit(${
                                   item.id
                                 })">${item.name}${ageBadge}</p>
                                 <p class="text-[7px] font-bold text-slate-400 uppercase mt-0.5">Bid: $${item.bid.toFixed(
@@ -1297,7 +1513,7 @@
               ${rows}
               ${
                 undated
-                  ? `<p class="text-[7px] font-bold text-slate-400 uppercase pt-1.5 ${keys.length ? "border-t border-slate-100" : ""}">${undated} older sale${undated === 1 ? "" : "s"} with no date · tap one to add</p>`
+                  ? `<p class="text-[7px] font-bold text-slate-400 uppercase pt-1.5 ${keys.length ? "border-t border-slate-100" : ""}">${undated} older sale${undated === 1 ? "" : "s"} with no date · tap the name to add</p>`
                   : ""
               }
             </div>`;
