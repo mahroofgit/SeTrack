@@ -96,6 +96,20 @@
       .calc-container {
         height: calc(100dvh - 190px);
       }
+      .calc-mode {
+        padding: 0.45rem 0;
+        border-radius: 0.6rem;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #64748b;
+      }
+      .calc-mode.active {
+        background: white;
+        color: #0f172a;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+      }
       .numpad-btn {
         background: white;
         border: 1px solid #e2e8f0;
@@ -106,7 +120,7 @@
         align-items: center;
         justify-content: center;
         transition: all 0.05s;
-        min-height: 48px;
+        min-height: 0;
       }
       .numpad-btn:active {
         background-color: #eff6ff;
@@ -183,7 +197,10 @@
         </div>
       </header>
 
-      <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl mb-3">
+      <div
+        id="summary-card"
+        class="bg-slate-900 text-white p-4 rounded-2xl shadow-xl mb-3"
+      >
         <p class="text-[8px] opacity-60 font-bold uppercase tracking-widest">
           Net Profit
         </p>
@@ -263,28 +280,62 @@
       </div>
 
       <div id="calc-view" class="hidden flex-col calc-container">
-        <div class="text-center py-3 shrink-0">
+        <div
+          class="grid grid-cols-2 gap-1 p-1 bg-slate-200/70 rounded-xl shrink-0"
+        >
+          <button
+            id="calc-mode-cost"
+            onclick="setCalcMode('cost')"
+            class="calc-mode active"
+          >
+            Total Cost
+          </button>
+          <button
+            id="calc-mode-max"
+            onclick="setCalcMode('max')"
+            class="calc-mode"
+          >
+            Max Bid
+          </button>
+        </div>
+        <div class="text-center py-2 shrink-0">
           <p
+            id="calc-result-label"
             class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1"
           >
             Final Total
           </p>
           <h2
             id="calc-tab-total"
-            class="text-5xl font-black text-blue-600 tracking-tighter"
+            class="text-4xl font-black text-blue-600 tracking-tighter"
           >
             $0.00
           </h2>
+          <p
+            id="calc-result-sub"
+            class="text-[8px] font-bold text-slate-400 uppercase tracking-tight mt-1 min-h-[12px]"
+          ></p>
         </div>
         <div class="grid grid-cols-2 gap-2 mb-3 shrink-0">
-          <div class="bg-white border border-slate-200 p-2 rounded-xl">
-            <label class="text-[8px] font-bold text-slate-400 uppercase block"
+          <div
+            id="calc-main-cell"
+            class="bg-white border-2 border-blue-500 p-2 rounded-xl"
+          >
+            <label
+              id="calc-main-label"
+              class="text-[8px] font-bold text-blue-600 uppercase block"
               >Bid ($)</label
             ><input
               id="calc-tab-buy"
               type="text"
               readonly
               class="w-full bg-transparent font-black text-base outline-none"
+            /><input
+              id="calc-tab-sell"
+              type="text"
+              readonly
+              placeholder="0"
+              class="hidden w-full bg-transparent font-black text-base outline-none"
             />
           </div>
           <div
@@ -339,8 +390,46 @@
               class="w-full bg-transparent font-bold text-sm outline-none"
             />
           </div>
+          <div
+            id="calc-target-cell"
+            class="hidden col-span-2 bg-white border border-slate-200 px-2 py-1.5 rounded-xl flex items-center gap-2"
+          >
+            <div class="shrink-0">
+              <label class="text-[8px] font-bold text-slate-400 uppercase block"
+                >Target</label
+              >
+              <input
+                id="calc-tab-target"
+                type="number"
+                inputmode="decimal"
+                value="50"
+                oninput="runStandaloneCalc()"
+                class="w-14 bg-transparent font-black text-base outline-none"
+              />
+            </div>
+            <div id="calc-tgt-chips" class="flex gap-1"></div>
+            <div class="flex gap-1 ml-auto">
+              <button
+                id="calc-tgt-pct"
+                onclick="setTargetType('pct')"
+                class="fee-btn active text-[8px] px-1.5 py-1"
+              >
+                %
+              </button>
+              <button
+                id="calc-tgt-usd"
+                onclick="setTargetType('usd')"
+                class="fee-btn text-[8px] px-1.5 py-1"
+              >
+                $
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="grid grid-cols-3 gap-2 grow mb-3">
+        <div
+          class="grid grid-cols-3 gap-2 grow mb-2 min-h-0"
+          style="grid-template-rows: repeat(4, minmax(40px, 1fr)) 36px"
+        >
           <button onclick="pressNum('1')" class="numpad-btn">1</button
           ><button onclick="pressNum('2')" class="numpad-btn">2</button
           ><button onclick="pressNum('3')" class="numpad-btn">3</button>
@@ -356,8 +445,10 @@
             ⌫
           </button>
           <button
+            id="calc-clear-btn"
             onclick="pressNum('C')"
-            class="col-span-3 numpad-btn text-slate-400 text-[11px] uppercase h-10"
+            class="col-span-3 numpad-btn text-slate-400 uppercase"
+            style="font-size: 11px; min-height: 0"
           >
             Clear Bid
           </button>
@@ -685,10 +776,14 @@
         });
         const main = document.getElementById("main-view");
         const calc = document.getElementById("calc-view");
+        document
+          .getElementById("summary-card")
+          .classList.toggle("hidden", t === "calculator");
         if (t === "calculator") {
           main.classList.add("hidden");
           calc.classList.remove("hidden");
           calc.classList.add("flex");
+          fitCalc();
         } else {
           main.classList.remove("hidden");
           calc.classList.add("hidden");
@@ -700,8 +795,79 @@
         render();
       }
 
+      // ---- Calc tab: Total Cost / Max Bid ----
+      let calcMode = "cost";
+      let targetType = "pct"; // "pct" = ROI %, "usd" = $ profit
+      const TARGET_CHIPS = { pct: [30, 50, 100], usd: [10, 20, 50] };
+      try {
+        const saved = JSON.parse(localStorage.getItem("bl_calc") || "{}");
+        if (saved.targetType) targetType = saved.targetType;
+        if (saved.target != null)
+          document.getElementById("calc-tab-target").value = saved.target;
+      } catch (_) {}
+
+      // Make the calculator fill the space between its top and the tab bar
+      function fitCalc() {
+        const calc = document.getElementById("calc-view");
+        if (calc.classList.contains("hidden")) return;
+        const navTop = document.querySelector("nav").getBoundingClientRect().top;
+        const top = calc.getBoundingClientRect().top + window.scrollY;
+        calc.style.height = Math.max(420, navTop - top - 8) + "px";
+        // On very small screens keep keys tappable and let the page scroll
+        if (calc.scrollHeight > calc.clientHeight)
+          calc.style.height = calc.scrollHeight + "px";
+      }
+      window.addEventListener("resize", fitCalc);
+
+      function setCalcMode(m) {
+        calcMode = m;
+        const max = m === "max";
+        document.getElementById("calc-mode-cost").classList.toggle("active", !max);
+        document.getElementById("calc-mode-max").classList.toggle("active", max);
+        document.getElementById("calc-tab-buy").classList.toggle("hidden", max);
+        document.getElementById("calc-tab-sell").classList.toggle("hidden", !max);
+        document.getElementById("calc-target-cell").classList.toggle("hidden", !max);
+        document.getElementById("calc-main-label").innerText = max
+          ? "Sell for ($)"
+          : "Bid ($)";
+        document.getElementById("calc-clear-btn").innerText = max
+          ? "Clear Price"
+          : "Clear Bid";
+        document.getElementById("calc-result-label").innerText = max
+          ? "Max Bid"
+          : "Final Total";
+        runStandaloneCalc();
+        fitCalc();
+      }
+
+      function setTargetType(t) {
+        targetType = t;
+        document.getElementById("calc-tab-target").value =
+          t === "pct" ? 50 : 20;
+        runStandaloneCalc();
+      }
+      function setTarget(v) {
+        document.getElementById("calc-tab-target").value = v;
+        runStandaloneCalc();
+      }
+      function renderTargetChips() {
+        const cur = parseFloat(document.getElementById("calc-tab-target").value);
+        document.getElementById("calc-tgt-pct").classList.toggle("active", targetType === "pct");
+        document.getElementById("calc-tgt-usd").classList.toggle("active", targetType === "usd");
+        document.getElementById("calc-tgt-chips").innerHTML = TARGET_CHIPS[targetType]
+          .map(
+            (v) =>
+              `<button onclick="setTarget(${v})" class="fee-btn text-[8px] px-2 py-1 ${
+                cur === v ? "active" : ""
+              }">${targetType === "pct" ? v + "%" : "$" + v}</button>`,
+          )
+          .join("");
+      }
+
       function pressNum(v) {
-        const i = document.getElementById("calc-tab-buy");
+        const i = document.getElementById(
+          calcMode === "max" ? "calc-tab-sell" : "calc-tab-buy",
+        );
         if (v === "C") i.value = "";
         else if (v === "⌫") i.value = i.value.slice(0, -1);
         else {
@@ -738,9 +904,55 @@
           parseFloat(document.getElementById("calc-tab-tax").value || 13) / 100;
         // AMZ: tax only on (bid + premium), fee added after tax.
         // ENC: tax on (bid + premium + fee).
-        const total = calcSrc === "AMZ" ? b * p * t + f : (b * p + f) * t;
-        document.getElementById("calc-tab-total").innerText =
-          `$${total.toFixed(2)}`;
+        const costOf = (bid) =>
+          calcSrc === "AMZ" ? bid * p * t + f : (bid * p + f) * t;
+        const out = document.getElementById("calc-tab-total");
+        const sub = document.getElementById("calc-result-sub");
+
+        if (calcMode !== "max") {
+          out.className = "text-4xl font-black text-blue-600 tracking-tighter";
+          out.innerText = `$${costOf(b).toFixed(2)}`;
+          sub.innerText = "";
+          return;
+        }
+
+        // Max Bid: highest bid whose total cost still hits the target.
+        renderTargetChips();
+        const sell =
+          parseFloat(document.getElementById("calc-tab-sell").value) || 0;
+        const target =
+          parseFloat(document.getElementById("calc-tab-target").value) || 0;
+        try {
+          localStorage.setItem("bl_calc", JSON.stringify({ targetType, target }));
+        } catch (_) {}
+
+        // Most we can spend in total and still make the target
+        const maxCost =
+          targetType === "pct" ? sell / (1 + target / 100) : sell - target;
+        // Undo the cost formula to get the bid
+        const raw =
+          calcSrc === "AMZ" ? (maxCost - f) / (p * t) : (maxCost / t - f) / p;
+        const bid = Math.floor(raw * 100) / 100; // round down to the cent
+
+        if (!sell) {
+          out.className = "text-4xl font-black text-slate-300 tracking-tighter";
+          out.innerText = "$0.00";
+          sub.innerText = "Enter what you expect to sell it for";
+          return;
+        }
+        if (bid <= 0) {
+          out.className = "text-4xl font-black text-red-600 tracking-tighter";
+          out.innerText = "Pass";
+          sub.innerText = "Can't hit that target at this price";
+          return;
+        }
+        const cost = costOf(bid);
+        const profit = sell - cost;
+        out.className = "text-4xl font-black text-green-600 tracking-tighter";
+        out.innerText = `$${bid.toFixed(2)}`;
+        sub.innerText = `Cost $${cost.toFixed(2)} · Profit $${profit.toFixed(
+          2,
+        )} · ROI ${((profit / cost) * 100).toFixed(0)}%`;
       }
 
       function editName(id) {
