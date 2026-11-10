@@ -237,6 +237,7 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </div>
+        <div id="tab-extra"></div>
         <div id="item-list"></div>
 
         <div
@@ -462,6 +463,17 @@
           <span id="live-profit-val" class="text-xs font-black">$-.--</span>
         </div>
 
+        <label
+          class="flex items-center justify-between gap-3 mb-4 px-1 text-[9px] font-black uppercase tracking-widest text-slate-400"
+        >
+          Sold on
+          <input
+            id="sale-date"
+            type="date"
+            class="flex-1 text-right text-xs font-bold text-slate-700 bg-slate-100 rounded-lg px-2 py-2 outline-none"
+          />
+        </label>
+
         <button
           id="unsold-opt"
           onclick="markUnsold()"
@@ -619,12 +631,40 @@
       let csvFile = null;
       let impSrc = "ENC";
       let calcSrc = "ENC";
+      let staleOnly = false; // Inv tab: show only items unsold 30+ days
+
+      const STALE_DAYS = 30; // amber badge
+      const OLD_DAYS = 60; // red badge
 
       // Today's date in the device's local time zone (YYYY-MM-DD).
       // toISOString() uses UTC, which gave tomorrow's date in the evening.
       function localToday() {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      }
+
+      // Whole days between two YYYY-MM-DD dates (b - a)
+      function daysBetween(a, b) {
+        const ms = Date.parse(b) - Date.parse(a);
+        return isNaN(ms) ? null : Math.round(ms / 86400000);
+      }
+      function fmtMonth(ym) {
+        const [y, m] = ym.split("-").map(Number);
+        return new Date(y, m - 1, 1).toLocaleDateString(undefined, {
+          month: "short",
+          year: "numeric",
+        });
+      }
+      function fmtDay(d) {
+        const [y, m, dd] = d.split("-").map(Number);
+        return new Date(y, m - 1, dd).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        });
+      }
+      function toggleStale() {
+        staleOnly = !staleOnly;
+        render();
       }
 
       document.getElementById("in-date").value = localToday();
@@ -734,7 +774,13 @@
 
         const filtered = db
           .filter((i) => {
-            if (curTab === "inventory") return !i.sold && !i.archived;
+            if (curTab === "inventory")
+              return (
+                !i.sold &&
+                !i.archived &&
+                (!staleOnly ||
+                  daysBetween(i.date, localToday()) >= STALE_DAYS)
+              );
             if (curTab === "sold") return i.sold;
             if (curTab === "archive") return i.archived;
             return false;
@@ -746,6 +792,8 @@
                 document.getElementById("search-input").value.toLowerCase(),
               ),
           );
+
+        renderTabExtra();
 
         const groups = filtered.reduce((acc, i) => {
           const key = `${i.date || "N/A"}_${i.source || "ENC"}`;
@@ -806,6 +854,28 @@
                     ? ((item.profit / item.totalPaid) * 100).toFixed(0)
                     : 0;
                 const isHigh = item.sold && item.profit / item.totalPaid >= 1;
+                const age = daysBetween(item.date, localToday());
+                const ageBadge =
+                  curTab === "inventory" && age >= STALE_DAYS
+                    ? `<span class="ml-1 px-1.5 py-0.5 rounded-full text-[7px] font-black align-middle ${
+                        age >= OLD_DAYS
+                          ? "bg-red-100 text-red-600"
+                          : "bg-amber-100 text-amber-700"
+                      }">${age}d</span>`
+                    : "";
+                const held = item.soldDate
+                  ? daysBetween(item.date, item.soldDate)
+                  : null;
+                const soldInfo =
+                  item.sold && item.soldDate
+                    ? `<p class="text-[7px] font-bold text-slate-400 uppercase mt-0.5">Sold ${fmtDay(
+                        item.soldDate,
+                      )}${
+                        held !== null && held >= 0
+                          ? ` · ${held} day${held === 1 ? "" : "s"} to sell`
+                          : ""
+                      }</p>`
+                    : "";
                 const action =
                   curTab === "inventory"
                     ? `<div class="swipe-actions"><button onclick="toggleArch(${item.id})" class="flex-1 bg-amber-500 text-white font-black text-[8px] uppercase">Arch</button><button onclick="toTrash(${item.id})" class="flex-1 bg-red-600 text-white font-black text-[8px] uppercase">Del</button></div>`
@@ -822,7 +892,7 @@
                             <div class="flex-1 pr-3 overflow-hidden">
                                 <p class="item-name text-slate-800" onclick="editName(${
                                   item.id
-                                })">${item.name}</p>
+                                })">${item.name}${ageBadge}</p>
                                 <p class="text-[7px] font-bold text-slate-400 uppercase mt-0.5">Bid: $${item.bid.toFixed(
                                   2,
                                 )} | Paid: $${item.totalPaid.toFixed(2)} ${
@@ -831,7 +901,7 @@
                                         2,
                                       )}</span>`
                                     : ""
-                                }</p>
+                                }</p>${soldInfo}
                             </div>
                             <div class="text-right shrink-0">
                                 ${
@@ -886,6 +956,95 @@
         document.getElementById("total-unsold").innerText =
           `$${unsoldTot.toFixed(2)}`;
         document.getElementById("trash-count").innerText = trash.length;
+      }
+
+      // Extra strip above the list: stale stock notice on Inv,
+      // profit by month on Sold.
+      function renderTabExtra() {
+        const box = document.getElementById("tab-extra");
+        box.innerHTML = "";
+        const today = localToday();
+
+        if (curTab === "inventory") {
+          const stale = db.filter(
+            (i) =>
+              !i.sold &&
+              !i.archived &&
+              daysBetween(i.date, today) >= STALE_DAYS,
+          );
+          if (!stale.length && !staleOnly) return;
+          const old = stale.filter(
+            (i) => daysBetween(i.date, today) >= OLD_DAYS,
+          ).length;
+          const cost = stale.reduce((t, i) => t + i.totalPaid, 0);
+          box.innerHTML = `
+            <button onclick="toggleStale()" class="w-full flex items-center justify-between gap-2 mb-1 px-3 py-2 rounded-xl border text-left ${
+              staleOnly
+                ? "bg-amber-500 border-amber-500 text-white"
+                : "bg-amber-50 border-amber-200 text-amber-800"
+            }">
+              <span class="text-[9px] font-black uppercase tracking-tight">
+                ${stale.length} item${stale.length === 1 ? "" : "s"} unsold ${STALE_DAYS}+ days
+                <span class="font-bold opacity-80">· $${cost.toFixed(2)}${
+                  old ? ` · ${old} over ${OLD_DAYS}d` : ""
+                }</span>
+              </span>
+              <span class="text-[8px] font-black uppercase shrink-0">${
+                staleOnly ? "Show all" : "Show"
+              }</span>
+            </button>`;
+          return;
+        }
+
+        if (curTab === "sold") {
+          const months = {};
+          let undated = 0;
+          db.filter((i) => i.sold).forEach((i) => {
+            if (!i.soldDate) return undated++;
+            const k = i.soldDate.slice(0, 7);
+            const m = (months[k] = months[k] || {
+              profit: 0,
+              rev: 0,
+              n: 0,
+              days: 0,
+              dn: 0,
+            });
+            m.profit += i.profit;
+            m.rev += i.sell;
+            m.n++;
+            const d = daysBetween(i.date, i.soldDate);
+            if (d !== null && d >= 0) {
+              m.days += d;
+              m.dn++;
+            }
+          });
+          const keys = Object.keys(months).sort().reverse();
+          if (!keys.length && !undated) return;
+          const rows = keys
+            .map((k) => {
+              const m = months[k];
+              return `<div class="flex items-center justify-between py-1.5 border-t border-slate-100 first:border-0">
+                <span class="text-[10px] font-black text-slate-700 w-16">${fmtMonth(k)}</span>
+                <span class="text-[8px] font-bold text-slate-400 uppercase flex-1">${m.n} sold${
+                  m.dn ? ` · avg ${Math.round(m.days / m.dn)} days` : ""
+                } · Rev $${m.rev.toFixed(0)}</span>
+                <span class="text-[11px] font-black ${
+                  m.profit >= 0 ? "text-green-600" : "text-red-600"
+                }">$${m.profit.toFixed(2)}</span>
+              </div>`;
+            })
+            .join("");
+          box.innerHTML = `
+            <div class="mb-1 px-3 py-2 rounded-xl border border-slate-200 bg-white shadow-sm">
+              <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Profit by month sold</p>
+              ${rows}
+              ${
+                undated
+                  ? `<p class="text-[7px] font-bold text-slate-400 uppercase pt-1.5 ${keys.length ? "border-t border-slate-100" : ""}">${undated} older sale${undated === 1 ? "" : "s"} with no date · tap one to add</p>`
+                  : ""
+              }
+            </div>`;
+        }
       }
 
       // ---- Swipe to reveal Arch / Del ----
@@ -1051,6 +1210,8 @@
         const i = db.find((x) => x.id === id);
         document.getElementById("sale-modal").classList.remove("hidden");
         document.getElementById("sale-price").value = i.sold ? i.sell : "";
+        document.getElementById("sale-date").value =
+          (i.sold && i.soldDate) || localToday();
         document
           .getElementById("unsold-opt")
           .classList.toggle("hidden", !i.sold);
@@ -1063,6 +1224,8 @@
           i.sell = v;
           i.profit = v - i.totalPaid;
           i.sold = true;
+          i.soldDate =
+            document.getElementById("sale-date").value || localToday();
           save();
         }
         closeSale();
@@ -1073,6 +1236,7 @@
           i.sold = false;
           i.sell = 0;
           i.profit = 0;
+          delete i.soldDate;
           save();
         }
         closeSale();
@@ -1305,6 +1469,13 @@
       }
 
       render();
+
+      // Offline support: cache the app so it opens without a connection
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () =>
+          navigator.serviceWorker.register("sw.js").catch(() => {}),
+        );
+      }
     </script>
   </body>
 </html>
